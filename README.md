@@ -45,7 +45,6 @@ Configure the required environment variables:
 
 Never upload your `.env` file or expose API keys publicly.
 
-## Contributors
 ## Contributing
 
 We welcome contributions from developers of all experience levels, especially beginners participating in Open Source Week!
@@ -88,6 +87,10 @@ We welcome contributions from developers of all experience levels, especially be
 
 Happy Contributing! 🚀
 Developed as a collaborative hackathon project.
+
+## Contributors
+
+Thanks to everyone who contributes to making HackHub better!
 
 ## License
 
