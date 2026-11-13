@@ -6,6 +6,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep transition timing consistent despite Tailwind utilities */
+button:not([data-no-button-feedback]),
+input[type="button"]:not([data-no-button-feedback]),
+input[type="submit"]:not([data-no-button-feedback]),
+input[type="reset"]:not([data-no-button-feedback]) {
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
 body {
   font-family: "Inter", "Poppins", system-ui, -apple-system, sans-serif;
   background: linear-gradient(
@@ -2245,5 +2254,76 @@ h6 {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+
+/* ==========================================
+   CONSISTENT BUTTON INTERACTIONS
+   Applies across the application
+========================================== */
+
+/*
+  Keep button feedback predictable without overriding each button's
+  existing colors, gradients, shadows, or hover transforms.
+*/
+button:not([data-no-button-feedback]),
+input[type="button"]:not([data-no-button-feedback]),
+input[type="submit"]:not([data-no-button-feedback]),
+input[type="reset"]:not([data-no-button-feedback]),
+[role="button"]:not([data-no-button-feedback]) {
+  transition-property: color, background-color, border-color, opacity, box-shadow, filter;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
+/* Subtle hover feedback for pointer devices */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):not([data-no-button-feedback]):hover,
+  input[type="button"]:not(:disabled):not([data-no-button-feedback]):hover,
+  input[type="submit"]:not(:disabled):not([data-no-button-feedback]):hover,
+  input[type="reset"]:not(:disabled):not([data-no-button-feedback]):hover,
+  [role="button"]:not([aria-disabled="true"]):not([data-no-button-feedback]):hover {
+    filter: brightness(1.06);
+  }
+}
+
+/* Clear keyboard focus indicator */
+button:focus-visible,
+input[type="button"]:focus-visible,
+input[type="submit"]:focus-visible,
+input[type="reset"]:focus-visible,
+[role="button"]:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.auth-button:focus-visible,
+.logout-btn:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
+}
+
+/* Disabled controls should not appear interactive */
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: none;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  [role="button"],
+  .btn-primary,
+  .btn-secondary,
+  .auth-button,
+  .logout-btn {
+    transition-duration: 0.01ms !important;
   }
 }
