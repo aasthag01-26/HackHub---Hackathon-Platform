@@ -18,7 +18,8 @@ router.post("/", async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
+    const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const model = genAI.getGenerativeModel({ model: modelName });
     const prompt = `Generate a short startup pitch for this idea:\n\n${idea}`;
     console.log("Prompt:", prompt);
 
