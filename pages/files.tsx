@@ -43,8 +43,8 @@ export default function Files() {
   // ✅ Use environment variable (auto switches between localhost & Render)
   const API_BASE =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
- 
-    const getAuthHeaders = () => {
+
+  const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
 
     return {
@@ -52,12 +52,10 @@ export default function Files() {
     };
   };
 
-
   // ✅ Fetch all files from backend
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-
         const res = await fetch(`${API_BASE}/files/files`, {
           headers: getAuthHeaders(),
         });
@@ -70,7 +68,7 @@ export default function Files() {
               name: file.filename,
               type: "document",
               icon: "📄",
-            }))
+            })),
           );
         }
       } catch (err) {
@@ -85,7 +83,9 @@ export default function Files() {
   };
 
   // ✅ Upload file
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -93,13 +93,11 @@ export default function Files() {
     formData.append("file", file);
 
     try {
-
       const res = await fetch(`${API_BASE}/files/upload`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: formData,
       });
-
 
       const data = await res.json();
 
@@ -126,7 +124,8 @@ export default function Files() {
 
   // ✅ Delete file
   const handleDeleteFile = async (filename: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) return;
+    if (!window.confirm(`Are you sure you want to delete "${filename}"?`))
+      return;
 
     try {
       const res = await fetch(`${API_BASE}/files/file/${filename}`, {
@@ -138,7 +137,9 @@ export default function Files() {
       try {
         data = await res.json();
       } catch {
-        data = { message: "Unexpected response (HTML returned instead of JSON)" };
+        data = {
+          message: "Unexpected response (HTML returned instead of JSON)",
+        };
       }
 
       if (res.ok) {
@@ -154,34 +155,34 @@ export default function Files() {
   };
 
   const handleDownloadFile = async (filename: string) => {
-  try {
-    const res = await fetch(
-      `${API_BASE}/files/file/${encodeURIComponent(filename)}`,
-      {
-        headers: getAuthHeaders(),
+    try {
+      const res = await fetch(
+        `${API_BASE}/files/file/${encodeURIComponent(filename)}`,
+        {
+          headers: getAuthHeaders(),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Download failed");
       }
-    );
 
-    if (!res.ok) {
-      throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download error:", error);
+      alert("Unable to download file!");
     }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Download error:", error);
-    alert("Unable to download file!");
-  }
-};
+  };
 
   // ✅ Modal handlers
   const openAddLinkModal = () => {
@@ -218,8 +219,8 @@ export default function Files() {
 
       <p className="text-body-sm font-body text-zinc-400 mb-6 max-w-3xl">
         This section is your team's shared repository. Upload important
-        documents, presentations, and snapshots. You can also save and share
-        web links, ensuring everyone has access to the same resources.
+        documents, presentations, and snapshots. You can also save and share web
+        links, ensuring everyone has access to the same resources.
       </p>
 
       {/* ✅ File Upload Section */}
@@ -238,33 +239,54 @@ export default function Files() {
           />
         </div>
 
-        {/* ✅ File grid with delete button */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className="glass rounded-xl p-3 text-center transition-all duration-300 hover:scale-105 relative"
-            >
-              <button
-                onClick={() => handleDeleteFile(file.name)}
-                className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-sm"
-                title="Delete file"
-              >
-                ✖
-              </button>
+        {/* File grid with empty state */}
+        {files.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <p className="text-5xl mb-4">📂</p>
 
-              <button
-                onClick={() => handleDownloadFile(file.name)}
-                className="block w-full"
+            <h4 className="text-heading-lg font-heading mb-2">
+              No files uploaded yet!
+            </h4>
+
+            <p className="text-body-sm text-zinc-400 max-w-md mx-auto">
+              Your team's shared files will appear here. Upload documents,
+              images, or presentations to keep all your important resources in
+              one place.
+            </p>
+
+            <button onClick={triggerFileSelect} className="btn-primary mt-5">
+              Upload Your First File
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {files.map((file) => (
+              <div
+                key={file.id}
+                className="glass rounded-xl p-3 text-center transition-all duration-300 hover:scale-105 relative"
               >
-                <span className="text-4xl">{file.icon}</span>
-                <p className="text-body-sm font-body mt-2 truncate text-blue-400 hover:underline">
-                  {file.name}
-                </p>
-              </button>
-            </div>
-          ))}
-        </div>
+                <button
+                  onClick={() => handleDeleteFile(file.name)}
+                  className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-sm"
+                  title="Delete file"
+                >
+                  ✖
+                </button>
+
+                <button
+                  onClick={() => handleDownloadFile(file.name)}
+                  className="block w-full"
+                >
+                  <span className="text-4xl">{file.icon}</span>
+
+                  <p className="text-body-sm font-body mt-2 truncate text-blue-400 hover:underline">
+                    {file.name}
+                  </p>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ✅ Show recently uploaded file */}
         {uploadedFile && (
@@ -284,7 +306,9 @@ export default function Files() {
       {/* ✅ Links Section */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-heading-lg font-heading">Saved Important Links</h3>
+          <h3 className="text-heading-lg font-heading">
+            Saved Important Links
+          </h3>
           <button onClick={openAddLinkModal} className="btn-primary text-sm">
             Add Link
           </button>
@@ -304,7 +328,9 @@ export default function Files() {
               >
                 {link.title}
               </a>
-              <span className="text-caption text-zinc-500">{link.category}</span>
+              <span className="text-caption text-zinc-500">
+                {link.category}
+              </span>
             </li>
           ))}
         </ul>

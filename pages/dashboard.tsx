@@ -43,7 +43,7 @@ export default function Dashboard() {
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter((t) => t.status === "Done").length;
     const inProgressTasks = tasks.filter(
-      (t) => t.status === "In Progress"
+      (t) => t.status === "In Progress",
     ).length;
     const todoTasks = tasks.filter((t) => t.status === "To Do").length;
     const completionPercentage =
@@ -150,7 +150,7 @@ export default function Dashboard() {
       setChartError(
         `Error creating chart: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
       setChartLoading(false);
     }
@@ -188,7 +188,7 @@ export default function Dashboard() {
 
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
-        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
       );
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -219,7 +219,7 @@ export default function Dashboard() {
 
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
-        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
       );
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
@@ -292,7 +292,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (router.pathname === "/dashboard" && chartJsLoaded && window.Chart) {
       console.log(
-        "📍 Dashboard route active, initializing chart with multiple attempts"
+        "📍 Dashboard route active, initializing chart with multiple attempts",
       );
 
       // Multiple initialization attempts to ensure chart loads
@@ -409,7 +409,7 @@ export default function Dashboard() {
   }
 
   return (
-    <> 
+    <>
       <Head>
         <title>HackHub - Dashboard</title>
       </Head>
@@ -539,28 +539,49 @@ export default function Dashboard() {
 
         {/* Team Intro */}
         <div className="card">
-          <h3 className="text-heading-lg font-heading mb-4">{teamName}</h3>
+          {teamName ? (
+            <>
+              <h3 className="text-heading-lg font-heading mb-4">{teamName}</h3>
 
-          {/* --- ENHANCEMENT: Replaced <img> with a custom gradient avatar --- */}
-          <div
-            className="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-zinc-700
-                       flex items-center justify-center 
-                       bg-gradient-to-br from-zinc-800 to-zinc-900"
-          >
-            <span className="text-4xl font-display text-gradient-primary">
-              {teamInitial}
-            </span>
-          </div>
+              <div
+                className="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-zinc-700
+                         flex items-center justify-center
+                         bg-gradient-to-br from-zinc-800 to-zinc-900"
+              >
+                <span className="text-4xl font-display text-gradient-primary">
+                  {teamInitial}
+                </span>
+              </div>
 
-          <p className="text-body-sm font-body text-zinc-400 text-center">
-            {teamBio}
-          </p>
-          <button
-            onClick={() => router.push("/team-setup")}
-            className="w-full mt-4 btn-primary"
-          >
-            Edit Team Info
-          </button>
+              <p className="text-body-sm font-body text-zinc-400 text-center">
+                {teamBio || "No team description added yet."}
+              </p>
+
+              <button
+                onClick={() => router.push("/team-setup")}
+                className="w-full mt-4 btn-primary"
+              >
+                Edit Team Info
+              </button>
+            </>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-4xl mb-3">👥</p>
+              <h3 className="text-heading-lg font-heading mb-2">
+                No team yet!
+              </h3>
+              <p className="text-body-sm text-zinc-400 mb-4">
+                You haven't joined or created a team yet. Set up your team to
+                start collaborating on your hackathon project.
+              </p>
+              <button
+                onClick={() => router.push("/team-setup")}
+                className="btn-primary w-full"
+              >
+                Create or Join a Team
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Hackathon Timer */}
@@ -664,9 +685,26 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Upcoming Tasks Section */}
       <div className="card mt-6">
         <h3 className="font-semibold mb-4 text-lg">Upcoming Tasks</h3>
-        {tasks.filter((task) => task.status !== "Done").length > 0 ? (
+
+        {tasks.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-4xl mb-3">📝</p>
+            <h4 className="text-lg font-semibold mb-2">No tasks yet!</h4>
+            <p className="text-zinc-400 text-sm mb-4">
+              Your team's tasks will appear here once you create them. Add your
+              first task to start organizing your project.
+            </p>
+            <button
+              onClick={() => router.push("/tasks")}
+              className="btn-primary"
+            >
+              Create Your First Task
+            </button>
+          </div>
+        ) : tasks.filter((task) => task.status !== "Done").length > 0 ? (
           <div className="space-y-3">
             {tasks
               .filter((task) => task.status !== "Done")
@@ -681,6 +719,7 @@ export default function Dashboard() {
                       Assigned to: {task.assignee}
                     </p>
                   </div>
+
                   <span
                     className={`status-badge ${
                       task.status === "In Progress"
@@ -694,19 +733,23 @@ export default function Dashboard() {
               ))}
           </div>
         ) : (
-          <p className="text-zinc-400 text-center py-4">
-            All tasks completed! 🎉
-          </p>
+          <div className="text-center py-8">
+            <p className="text-4xl mb-3">🎉</p>
+            <h4 className="font-semibold mb-2">All tasks completed!</h4>
+            <p className="text-zinc-400 text-sm">
+              Great work! Your team has completed all its tasks.
+            </p>
+          </div>
         )}
       </div>
 
       {/* Team Members Section */}
       <div className="card mt-6">
         <h3 className="font-semibold mb-4 text-lg">Team Members</h3>
+
         {teamMembers.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {teamMembers.map((member) => (
-              // --- ENHANCEMENT: Replaced .member-card with the .glass class for consistency ---
               <div
                 key={member.id}
                 className="glass rounded-xl flex items-center p-4"
@@ -716,6 +759,7 @@ export default function Dashboard() {
                   alt={member.name}
                   className="w-10 h-10 rounded-full mr-3"
                 />
+
                 <div>
                   <p className="font-medium">{member.name}</p>
                   <p className="text-xs text-zinc-400">{member.role}</p>
@@ -724,8 +768,14 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-4">
-            <p className="text-zinc-400 mb-3">No team members yet</p>
+          <div className="text-center py-8">
+            <p className="text-4xl mb-3">🤝</p>
+            <h4 className="font-semibold mb-2">No team members yet!</h4>
+            <p className="text-zinc-400 text-sm mb-4">
+              Bring your teammates together and collaborate on your hackathon
+              project.
+            </p>
+
             <button
               onClick={() => router.push("/team-setup")}
               className="btn-primary"
@@ -735,6 +785,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-      </>
+    </>
   );
 }
