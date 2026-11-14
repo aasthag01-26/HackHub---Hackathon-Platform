@@ -343,12 +343,18 @@ export default function Tasks() {
                       e.target.value as "To Do" | "In Progress" | "Done"
                     )
                   }
-                  className="input-enhanced w-full"
+                  className="input-enhanced w-full bg-slate-800 text-white cursor-pointer"
                   required
                 >
-                  <option value="To Do">To Do</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Done">Done</option>
+                  <option value="To Do" className="bg-slate-800 text-white py-2">
+                    To Do
+                  </option>
+                  <option value="In Progress" className="bg-slate-800 text-white py-2">
+                    In Progress
+                  </option>
+                  <option value="Done" className="bg-slate-800 text-white py-2">
+                    Done
+                  </option>
                 </select>
               </div>
               <div className="flex gap-4">
