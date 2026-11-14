@@ -37,90 +37,121 @@ export default function Files() {
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newLinkCategory, setNewLinkCategory] = useState("");
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // ✅ Use environment variable (auto switches between localhost & Render)
   const API_BASE =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
- 
-    const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
 
+  const getAuthHeaders = () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     return {
       Authorization: `Bearer ${token}`,
     };
   };
 
+  const getFileIcon = (filename: string): string => {
+    const ext = filename.split(".").pop()?.toLowerCase() || "";
+    if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) return "🖼️";
+    if (["pdf"].includes(ext)) return "📕";
+    if (["doc", "docx", "txt", "rtf", "md"].includes(ext)) return "📄";
+    if (["xls", "xlsx", "csv"].includes(ext)) return "📊";
+    if (["ppt", "pptx"].includes(ext)) return "📽️";
+    if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return "📦";
+    return "📄";
+  };
 
   // ✅ Fetch all files from backend
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
+  const fetchFiles = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/files/files`, {
+        headers: getAuthHeaders(),
+      });
 
-        const res = await fetch(`${API_BASE}/files/files`, {
-          headers: getAuthHeaders(),
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          setFiles(
-            data.map((file: any) => ({
-              id: file._id,
-              name: file.filename,
-              type: "document",
-              icon: "📄",
-            }))
-          );
-        }
-      } catch (err) {
-        console.error("Error fetching files:", err);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setFiles(
+          data.map((file: any) => ({
+            id: file._id,
+            name: file.filename,
+            type: "document",
+            icon: getFileIcon(file.filename),
+          }))
+        );
       }
-    };
+    } catch (err) {
+      console.error("Error fetching files:", err);
+    }
+  };
+
+  useEffect(() => {
     fetchFiles();
   }, [API_BASE]);
 
   const triggerFileSelect = () => {
+    setStatusMessage(null);
     fileInputRef.current?.click();
   };
 
-  // ✅ Upload file
+  // ✅ Upload file with validation and feedback
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Client-side file size validation (10MB limit)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setStatusMessage({
+        type: "error",
+        text: `File exceeds 10MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please choose a smaller file.`,
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
+    setIsUploading(true);
+    setStatusMessage(null);
 
+    try {
       const res = await fetch(`${API_BASE}/files/upload`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: formData,
       });
 
-
       const data = await res.json();
 
       if (res.ok) {
-        alert("✅ File uploaded successfully!");
+        setStatusMessage({
+          type: "success",
+          text: `File "${file.name}" uploaded successfully!`,
+        });
         setUploadedFile(data.file.filename);
-        setFiles((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            name: data.file.filename,
-            type: "document",
-            icon: "📄",
-          },
-        ]);
+        await fetchFiles();
       } else {
-        alert(`❌ Upload failed: ${data.message}`);
+        setStatusMessage({
+          type: "error",
+          text: data.message || "Failed to upload file. Please ensure you are in a team.",
+        });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error uploading file!");
+      setStatusMessage({
+        type: "error",
+        text: "Error uploading file. Check your network or server connection.",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -224,10 +255,33 @@ export default function Files() {
 
       {/* ✅ File Upload Section */}
       <div className="card mb-6">
+        {statusMessage && (
+          <div
+            className={`p-3 rounded-lg mb-4 text-sm font-medium ${
+              statusMessage.type === "success"
+                ? "bg-green-500/20 border border-green-500/50 text-green-300"
+                : "bg-red-500/20 border border-red-500/50 text-red-300"
+            }`}
+          >
+            {statusMessage.text}
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-heading-lg font-heading">Uploaded Files</h3>
-          <button onClick={triggerFileSelect} className="btn-primary text-sm">
-            Upload File
+          <button
+            onClick={triggerFileSelect}
+            disabled={isUploading}
+            className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
+          >
+            {isUploading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Uploading...
+              </>
+            ) : (
+              "Upload File"
+            )}
           </button>
 
           <input
