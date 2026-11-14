@@ -343,7 +343,7 @@ export default function Tasks() {
                       e.target.value as "To Do" | "In Progress" | "Done"
                     )
                   }
-                  className="input-enhanced w-full"
+                  className="input-enhanced status-select-enhanced w-full"
                   required
                 >
                   <option value="To Do">To Do</option>

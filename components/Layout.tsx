@@ -118,8 +118,8 @@ const Layout = ({ children }: LayoutProps) => {
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-start px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-all"
-          >
+            className="logout-btn w-full flex items-center justify-start px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
             <LogOut className="mr-3 w-5 h-5" />
             Logout
           </button>

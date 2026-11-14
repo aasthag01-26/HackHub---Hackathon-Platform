@@ -292,6 +292,24 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   );
 }
 
+.status-select-enhanced {
+  color-scheme: dark;
+}
+
+.status-select-enhanced option {
+  color: #f8fafc;
+  background-color: #1e293b;
+}
+
+.status-select-enhanced option:hover,
+.status-select-enhanced option:focus {
+  background-color: #334155;
+}
+
+.status-select-enhanced option:checked {
+  background-color: #0c4a6e;
+}
+
 /* Glassmorphism Effect */
 .glass {
   background: rgba(30, 41, 59, 0.3);
