@@ -50,7 +50,7 @@ API also provides protected user, team, task, and file endpoints.
 1. Clone the repository and enter the project directory:
 
    ```bash
-   git clone https://github.com/Shivani-Meena07/HackHub---Hackathon-Platform.git
+   git clone https://github.com/aasthag01-26/HackHub---Hackathon-Platform.git
    cd HackHub---Hackathon-Platform
    ```
 
