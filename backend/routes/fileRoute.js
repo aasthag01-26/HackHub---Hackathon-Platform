@@ -6,7 +6,40 @@ const { Readable } = require("stream");
 const { protect } = require("../middleware/authMiddleware.js");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+
+// Configure Multer with memory storage, size limit (10MB), and file type validation
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = /\.(pdf|doc|docx|txt|rtf|png|jpg|jpeg|gif|webp|svg|zip|rar|7z|tar|gz|csv|xlsx|xls|pptx|ppt|json|md)$/i;
+    if (!file.originalname.match(allowedExtensions)) {
+      return cb(
+        new Error(
+          "Unsupported file type. Please upload documents, images, presentations, or project archives."
+        )
+      );
+    }
+    cb(null, true);
+  },
+});
+
+// Middleware wrapper to handle Multer errors gracefully
+const handleUploadMiddleware = (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res
+          .status(400)
+          .json({ message: "File exceeds the 10MB size limit. Please choose a smaller file." });
+      }
+      return res.status(400).json({ message: `Upload error: ${err.message}` });
+    } else if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+};
 
 // Helper: Get current user's team
 const getTeamId = (req, res) => {
@@ -27,7 +60,7 @@ const getTeamId = (req, res) => {
 router.post(
   "/upload",
   protect,
-  upload.single("file"),
+  handleUploadMiddleware,
   async (req, res) => {
     try {
       const teamId = getTeamId(req, res);
