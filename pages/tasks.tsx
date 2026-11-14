@@ -7,6 +7,7 @@ export default function Tasks() {
   const router = useRouter();
   const {
     tasks,
+    setTasks,
     addTask: addTaskToContext,
     updateTask: updateTaskInContext,
     teamMembers,
@@ -15,7 +16,9 @@ export default function Tasks() {
 
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showUpdateTaskModal, setShowUpdateTaskModal] = useState(false);
+  const [showDeleteTaskModal, setShowDeleteTaskModal] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState<
@@ -42,6 +45,7 @@ export default function Tasks() {
   const todoTasks = tasks.filter((task) => task.status === "To Do");
   const inProgressTasks = tasks.filter((task) => task.status === "In Progress");
   const doneTasks = tasks.filter((task) => task.status === "Done");
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId);
 
   const openAddTaskModal = useCallback(() => {
     setNewTaskTitle("");
@@ -90,6 +94,33 @@ export default function Tasks() {
     closeUpdateTaskModal();
   }, [currentTaskId, newTaskStatus, updateTaskInContext, closeUpdateTaskModal]);
 
+  const openDeleteTaskModal = useCallback((taskId: string) => {
+    setSelectedTaskId(taskId);
+    setShowDeleteTaskModal(true);
+  }, []);
+
+  const closeDeleteTaskModal = useCallback(() => {
+    setShowDeleteTaskModal(false);
+    setSelectedTaskId(null);
+  }, []);
+
+  const handleDeleteTask = useCallback(() => {
+    if (selectedTaskId === null) return;
+    setTasks(tasks.filter((task) => task.id !== selectedTaskId));
+    closeDeleteTaskModal();
+  }, [selectedTaskId, tasks, setTasks, closeDeleteTaskModal]);
+
+  useEffect(() => {
+    if (!showDeleteTaskModal) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeDeleteTaskModal();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showDeleteTaskModal, closeDeleteTaskModal]);
+
   // Show loading state while checking authentication
   if (isLoading) {
     return (
@@ -137,12 +168,21 @@ export default function Tasks() {
                   <p className="text-body-sm font-body text-zinc-400 mt-1">
                     Assigned to: {task.assignee}
                   </p>
-                  <button
-                    onClick={() => openUpdateTaskModal(task.id)}
-                    className="text-xs mt-3 btn-secondary py-1 px-3"
-                  >
-                    Update Status
-                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openUpdateTaskModal(task.id)}
+                      className="text-xs btn-secondary py-1 px-3"
+                    >
+                      Update Status
+                    </button>
+                    <button
+                      onClick={() => openDeleteTaskModal(task.id)}
+                      className="text-xs btn-secondary border-red-500/40 py-1 px-3 text-red-300 hover:border-red-400 hover:text-red-200"
+                      aria-label={`Delete ${task.title}`}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -166,12 +206,21 @@ export default function Tasks() {
                   <p className="text-body-sm font-body text-zinc-400 mt-1">
                     Assigned to: {task.assignee}
                   </p>
-                  <button
-                    onClick={() => openUpdateTaskModal(task.id)}
-                    className="text-xs mt-3 btn-secondary py-1 px-3"
-                  >
-                    Update Status
-                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openUpdateTaskModal(task.id)}
+                      className="text-xs btn-secondary py-1 px-3"
+                    >
+                      Update Status
+                    </button>
+                    <button
+                      onClick={() => openDeleteTaskModal(task.id)}
+                      className="text-xs btn-secondary border-red-500/40 py-1 px-3 text-red-300 hover:border-red-400 hover:text-red-200"
+                      aria-label={`Delete ${task.title}`}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -199,12 +248,21 @@ export default function Tasks() {
                   <p className="text-body-sm font-body text-zinc-400 mt-1">
                     Assigned to: {task.assignee}
                   </p>
-                  <button
-                    onClick={() => openUpdateTaskModal(task.id)}
-                    className="text-xs mt-3 btn-secondary py-1 px-3"
-                  >
-                    Update Status
-                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openUpdateTaskModal(task.id)}
+                      className="text-xs btn-secondary py-1 px-3"
+                    >
+                      Update Status
+                    </button>
+                    <button
+                      onClick={() => openDeleteTaskModal(task.id)}
+                      className="text-xs btn-secondary border-red-500/40 py-1 px-3 text-red-300 hover:border-red-400 hover:text-red-200"
+                      aria-label={`Delete ${task.title}`}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -309,6 +367,51 @@ export default function Tasks() {
                   Update
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteTaskModal && selectedTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop"
+          onClick={closeDeleteTaskModal}
+        >
+          <div
+            className="card w-full max-w-md"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-task-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2
+              id="delete-task-title"
+              className="text-heading-xl font-heading mb-4"
+            >
+              Delete task?
+            </h2>
+            <p className="text-body-sm font-body text-zinc-300 mb-6">
+              Are you sure you want to delete this task? This action cannot be
+              undone.
+              <span className="block mt-2 font-semibold text-white">
+                {selectedTask.title}
+              </span>
+            </p>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={closeDeleteTaskModal}
+                className="w-full btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTask}
+                className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+              >
+                Confirm Delete
+              </button>
             </div>
           </div>
         </div>
