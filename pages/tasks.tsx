@@ -25,6 +25,7 @@ export default function Tasks() {
     "To Do" | "In Progress" | "Done"
   >("To Do");
   const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -309,16 +310,25 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={closeAddTaskModal}
-                  className="w-full btn-secondary"
+                  disabled={isActionLoading}
+                  className="w-full btn-secondary disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleAddTask}
-                  className="w-full btn-primary"
+                  disabled={isActionLoading || !newTaskTitle.trim()}
+                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Add Task
+                  {isActionLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Adding...
+                    </>
+                  ) : (
+                    "Add Task"
+                  )}
                 </button>
               </div>
             </div>
@@ -355,16 +365,25 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={closeUpdateTaskModal}
-                  className="w-full btn-secondary"
+                  disabled={isActionLoading}
+                  className="w-full btn-secondary disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleUpdateTaskStatus}
-                  className="w-full btn-primary"
+                  disabled={isActionLoading}
+                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Update
+                  {isActionLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Updating...
+                    </>
+                  ) : (
+                    "Update"
+                  )}
                 </button>
               </div>
             </div>
@@ -401,16 +420,25 @@ export default function Tasks() {
               <button
                 type="button"
                 onClick={closeDeleteTaskModal}
-                className="w-full btn-secondary"
+                disabled={isActionLoading}
+                className="w-full btn-secondary disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleDeleteTask}
-                className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                disabled={isActionLoading}
+                className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Confirm Delete
+                {isActionLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Deleting...
+                  </>
+                ) : (
+                  "Confirm Delete"
+                )}
               </button>
             </div>
           </div>
