@@ -239,32 +239,48 @@ export default function Files() {
         </div>
 
         {/* ✅ File grid with delete button */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className="glass rounded-xl p-3 text-center transition-all duration-300 hover:scale-105 relative"
+        {files.length === 0 ? (
+          <div className="py-10 px-4 text-center border border-dashed border-slate-700/80 rounded-xl bg-slate-800/30">
+            <span className="text-4xl block mb-2">📁</span>
+            <h4 className="text-slate-200 font-semibold mb-1">No files uploaded yet</h4>
+            <p className="text-slate-400 text-sm max-w-md mx-auto mb-4">
+              Share project documentation, presentation decks, or design assets with your team.
+            </p>
+            <button
+              onClick={triggerFileSelect}
+              className="btn-primary text-xs py-2 px-4 inline-flex items-center gap-1.5"
             >
-              <button
-                onClick={() => handleDeleteFile(file.name)}
-                className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-sm"
-                title="Delete file"
+              Upload Your First File
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {files.map((file) => (
+              <div
+                key={file.id}
+                className="glass rounded-xl p-3 text-center transition-all duration-300 hover:scale-105 relative"
               >
-                ✖
-              </button>
+                <button
+                  onClick={() => handleDeleteFile(file.name)}
+                  className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-sm"
+                  title="Delete file"
+                >
+                  ✖
+                </button>
 
-              <button
-                onClick={() => handleDownloadFile(file.name)}
-                className="block w-full"
-              >
-                <span className="text-4xl">{file.icon}</span>
-                <p className="text-body-sm font-body mt-2 truncate text-blue-400 hover:underline">
-                  {file.name}
-                </p>
-              </button>
-            </div>
-          ))}
-        </div>
+                <button
+                  onClick={() => handleDownloadFile(file.name)}
+                  className="block w-full"
+                >
+                  <span className="text-4xl">{file.icon}</span>
+                  <p className="text-body-sm font-body mt-2 truncate text-blue-400 hover:underline">
+                    {file.name}
+                  </p>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ✅ Show recently uploaded file */}
         {uploadedFile && (
