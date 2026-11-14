@@ -431,10 +431,10 @@ export default function Dashboard() {
           setChartError("Failed to load Chart.js");
         }}
       />
-      <h2 className="text-display-md font-display text-gradient-primary mb-8 text-glow">
+      <h2 className="text-2xl sm:text-3xl md:text-display-md font-display text-gradient-primary mb-6 sm:mb-8 text-glow">
         Team Dashboard
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Progress Chart */}
         <div className="card lg:col-span-2">
           <div className="flex justify-between items-center mb-4">
@@ -455,7 +455,7 @@ export default function Dashboard() {
                 }
                 setTimeout(initializeChart, 100);
               }}
-              className="btn-primary text-xs px-4 py-2"
+              className="btn-primary text-xs px-3 sm:px-4 py-1.5 sm:py-2"
               title="Refresh Chart"
             >
               🔄 Refresh
@@ -467,8 +467,8 @@ export default function Dashboard() {
                 This chart visualizes your team's task completion status.
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-display-sm font-display text-gradient-primary">
+            <div className="text-right flex-shrink-0 ml-2">
+              <p className="text-xl sm:text-display-sm font-display text-gradient-primary">
                 {taskStats.completionPercentage}%
               </p>
               <p className="text-caption text-zinc-400">Tasks Completed</p>
@@ -513,24 +513,24 @@ export default function Dashboard() {
               className="w-full h-full"
             ></canvas>
           </div>
-          <div className="grid grid-cols-3 gap-3 mt-6">
-            <div className="text-center p-3 glass rounded-xl">
-              <p className="text-sm text-emerald-400 font-semibold">Done</p>
-              <p className="text-2xl font-bold text-emerald-300">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
+            <div className="text-center p-2.5 sm:p-3 glass rounded-xl">
+              <p className="text-xs sm:text-sm text-emerald-400 font-semibold">Done</p>
+              <p className="text-lg sm:text-2xl font-bold text-emerald-300">
                 {taskStats.completedTasks}
               </p>
             </div>
-            <div className="text-center p-3 glass rounded-xl">
-              <p className="text-sm text-amber-400 font-semibold">
+            <div className="text-center p-2.5 sm:p-3 glass rounded-xl">
+              <p className="text-xs sm:text-sm text-amber-400 font-semibold">
                 In Progress
               </p>
-              <p className="text-2xl font-bold text-amber-300">
+              <p className="text-lg sm:text-2xl font-bold text-amber-300">
                 {taskStats.inProgressTasks}
               </p>
             </div>
-            <div className="text-center p-3 glass rounded-xl">
-              <p className="text-sm text-rose-400 font-semibold">To Do</p>
-              <p className="text-2xl font-bold text-rose-300">
+            <div className="text-center p-2.5 sm:p-3 glass rounded-xl">
+              <p className="text-xs sm:text-sm text-rose-400 font-semibold">To Do</p>
+              <p className="text-lg sm:text-2xl font-bold text-rose-300">
                 {taskStats.todoTasks}
               </p>
             </div>
@@ -576,41 +576,41 @@ export default function Dashboard() {
               </p>
 
               {hackathonTimeRemaining ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <div className="timer-digit-enhanced glow-purple">
-                      <div className="text-display-sm font-display text-white tabular-nums">
+                      <div className="text-xl sm:text-display-sm font-display text-white tabular-nums">
                         {hackathonTimeRemaining.days
                           .toString()
                           .padStart(2, "0")}
                       </div>
-                      <div className="text-caption text-gray-200">DAYS</div>
+                      <div className="text-[10px] sm:text-caption text-gray-200">DAYS</div>
                     </div>
                     <div className="timer-digit-enhanced glow-pink">
-                      <div className="text-display-sm font-display text-white tabular-nums">
+                      <div className="text-xl sm:text-display-sm font-display text-white tabular-nums">
                         {hackathonTimeRemaining.hours
                           .toString()
                           .padStart(2, "0")}
                       </div>
-                      <div className="text-caption text-gray-200">HOURS</div>
+                      <div className="text-[10px] sm:text-caption text-gray-200">HOURS</div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <div className="timer-digit-enhanced glow-orange">
-                      <div className="text-display-sm font-display text-white tabular-nums">
+                      <div className="text-xl sm:text-display-sm font-display text-white tabular-nums">
                         {hackathonTimeRemaining.minutes
                           .toString()
                           .padStart(2, "0")}
                       </div>
-                      <div className="text-caption text-gray-200">MINS</div>
+                      <div className="text-[10px] sm:text-caption text-gray-200">MINS</div>
                     </div>
                     <div className="timer-digit-enhanced glow-purple">
-                      <div className="text-display-sm font-display text-white tabular-nums">
+                      <div className="text-xl sm:text-display-sm font-display text-white tabular-nums">
                         {hackathonTimeRemaining.seconds
                           .toString()
                           .padStart(2, "0")}
                       </div>
-                      <div className="text-caption text-gray-200">SECS</div>
+                      <div className="text-[10px] sm:text-caption text-gray-200">SECS</div>
                     </div>
                   </div>
 
@@ -673,16 +673,16 @@ export default function Dashboard() {
               .map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 glass rounded-xl flex justify-between items-center transition-all duration-300"
+                  className="p-3.5 sm:p-4 glass rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all duration-300"
                 >
                   <div>
-                    <p className="font-medium">{task.title}</p>
+                    <p className="font-medium text-sm sm:text-base">{task.title}</p>
                     <p className="text-xs text-zinc-400">
                       Assigned to: {task.assignee}
                     </p>
                   </div>
                   <span
-                    className={`status-badge ${
+                    className={`status-badge self-start sm:self-center text-xs ${
                       task.status === "In Progress"
                         ? "status-progress"
                         : "status-todo"
