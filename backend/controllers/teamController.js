@@ -1,156 +1,283 @@
-const Team = require('../models/Team.js');
-const User = require('../models/User.js');
 
-// @desc    Create a new team
-// @route   POST /api/teams
+const Team = require("../models/Team.js");
+const User = require("../models/User.js");
+
+// @desc Create a new team
+// @route POST /api/teams
 const createTeam = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, bio } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ message: 'Please enter a team name' });
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        message: "Please enter a team name",
+      });
     }
 
-    // 🧹 Step 1: If user already in a team, remove them from that team
+    // Remove user from their previous team, if any
     if (req.user.teamId) {
       const oldTeam = await Team.findById(req.user.teamId);
+
       if (oldTeam) {
         oldTeam.members = oldTeam.members.filter(
-          (m) => !m.user.equals(req.user._id)
+          (member) => !member.user.equals(req.user._id)
         );
+
         await oldTeam.save();
       }
     }
 
-    // 🆕 Step 2: Create a new team with the user as leader
+    // Create new team
     const team = await Team.create({
-      name,
-      members: [{ user: req.user._id, role: 'leader' }],
+      name: name.trim(),
+      bio: bio?.trim() || "Our team is participating in a hackathon!",
+      members: [
+        {
+          user: req.user._id,
+          role: "leader",
+        },
+      ],
     });
 
-    // 🔗 Step 3: Update user document
-    
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: { teamId: team._id, role: "leader" } },
-      { new: true }
-    );
-
-console.log("Updated user teamId:", updatedUser?.teamId);
+    // Update user's team association
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        teamId: team._id,
+        role: "leader",
+      },
+    });
 
     res.status(201).json({
-      message: 'Team created successfully',
+      message: "Team created successfully",
       team,
     });
   } catch (error) {
-    console.error('CREATE TEAM ERROR:', error);
-    res.status(500).json({ message: 'Server error while creating team' });
+    console.error("CREATE TEAM ERROR:", error);
+
+    res.status(500).json({
+      message: "Server error while creating team",
+    });
   }
 };
 
-// @desc    Join a team using invite code
-// @route   POST /api/teams/join
+// @desc Join a team using invite code
+// @route POST /api/teams/join
 const joinTeam = async (req, res) => {
   try {
     const { inviteCode } = req.body;
 
-    const team = await Team.findOne({ inviteCode });
+    if (!inviteCode) {
+      return res.status(400).json({
+        message: "Please enter an invite code",
+      });
+    }
+
+    const team = await Team.findOne({
+      inviteCode: inviteCode.trim(),
+    });
+
     if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+      return res.status(404).json({
+        message: "Team not found. Please check the invite code.",
+      });
     }
 
-    const isAlreadyMember = team.members.some((m) =>
-      m.user.equals(req.user._id)
+    const isAlreadyMember = team.members.some((member) =>
+      member.user.equals(req.user._id)
     );
+
     if (isAlreadyMember) {
-      return res.status(400).json({ message: 'You are already in this team' });
+      return res.status(400).json({
+        message: "You are already in this team",
+      });
     }
 
-    // 🧹 If user was in an old team, remove them from there first
+    // Remove user from previous team
     if (req.user.teamId) {
       const oldTeam = await Team.findById(req.user.teamId);
+
       if (oldTeam) {
         oldTeam.members = oldTeam.members.filter(
-          (m) => !m.user.equals(req.user._id)
+          (member) => !member.user.equals(req.user._id)
         );
+
         await oldTeam.save();
       }
     }
 
-    // ➕ Add user to new team
-    team.members.push({ user: req.user._id, role: 'member' });
+    // Add user to new team
+    team.members.push({
+      user: req.user._id,
+      role: "member",
+    });
+
     await team.save();
 
-    // 🔗 Update user
-    await User.findByIdAndUpdate(req.user._id, { teamId: team._id });
+    // Update user document
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        teamId: team._id,
+        role: "member",
+      },
+    });
 
     res.status(200).json({
-      message: 'Joined team successfully',
+      message: "Joined team successfully",
       team,
     });
   } catch (error) {
-    console.error('JOIN TEAM ERROR:', error);
-    res.status(500).json({ message: 'Server error while joining team' });
+    console.error("JOIN TEAM ERROR:", error);
+
+    res.status(500).json({
+      message: "Server error while joining team",
+    });
   }
 };
 
-// @desc    Get current user's team details
-// @route   GET /api/teams/myteam
+// @desc Get current user's team
+// @route GET /api/teams/myteam
 const getMyTeam = async (req, res) => {
   try {
     if (!req.user.teamId) {
-      return res.status(404).json({ message: 'You are not part of any team' });
+      return res.status(404).json({
+        message: "You are not part of any team",
+      });
     }
 
     const team = await Team.findById(req.user.teamId)
-      .populate('members.user', 'name email')
+      .populate("members.user", "name email")
       .lean();
 
     if (!team) {
-      return res.status(404).json({ message: 'Team not found' });
+      return res.status(404).json({
+        message: "Team not found",
+      });
     }
 
     res.status(200).json({
-      message: 'Fetched team successfully',
+      message: "Fetched team successfully",
       team,
     });
   } catch (error) {
-    console.error('GET MY TEAM ERROR:', error);
-    res.status(500).json({ message: 'Server error while fetching team' });
+    console.error("GET MY TEAM ERROR:", error);
+
+    res.status(500).json({
+      message: "Server error while fetching team",
+    });
   }
 };
 
-// @desc    Leave the current team
-// @route   POST /api/teams/leave
+// @desc Update team name and bio
+// @route PUT /api/teams/myteam
+const updateMyTeam = async (req, res) => {
+  try {
+    const { name, bio } = req.body;
+
+    if (!req.user.teamId) {
+      return res.status(404).json({
+        message: "You are not part of any team",
+      });
+    }
+
+    const team = await Team.findById(req.user.teamId);
+
+    if (!team) {
+      return res.status(404).json({
+        message: "Team not found",
+      });
+    }
+
+    // Only team leader can update team profile
+    const membership = team.members.find((member) =>
+      member.user.equals(req.user._id)
+    );
+
+    if (!membership || membership.role !== "leader") {
+      return res.status(403).json({
+        message: "Only the team leader can update team details",
+      });
+    }
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({
+          message: "Team name cannot be empty",
+        });
+      }
+
+      team.name = name.trim();
+    }
+
+    if (bio !== undefined) {
+      team.bio = bio.trim();
+    }
+
+    await team.save();
+
+    res.status(200).json({
+      message: "Team updated successfully",
+      team,
+    });
+  } catch (error) {
+    console.error("UPDATE TEAM ERROR:", error);
+
+    res.status(500).json({
+      message: "Server error while updating team",
+    });
+  }
+};
+
+// @desc Leave current team
+// @route POST /api/teams/leave
 const leaveTeam = async (req, res) => {
   try {
-    // Step 1️⃣: Find user and their team
     const user = req.user;
+
     if (!user.teamId) {
-      return res.status(400).json({ message: "You are not in any team" });
+      return res.status(400).json({
+        message: "You are not in any team",
+      });
     }
 
     const team = await Team.findById(user.teamId);
+
     if (!team) {
-      return res.status(404).json({ message: "Team not found" });
+      return res.status(404).json({
+        message: "Team not found",
+      });
     }
 
-    // Step 2️⃣: Remove the user from the team members array
-    team.members = team.members.filter(m => !m.user.equals(user._id));
+    team.members = team.members.filter(
+      (member) => !member.user.equals(user._id)
+    );
+
     await team.save();
 
-    // Step 3️⃣: Remove teamId from user
-    await User.findByIdAndUpdate(user._id, { $unset: { teamId: "" } });
+    await User.findByIdAndUpdate(user._id, {
+      $unset: {
+        teamId: "",
+      },
+      $set: {
+        role: "member",
+      },
+    });
 
     res.status(200).json({
       message: "You have left the team successfully",
     });
   } catch (error) {
     console.error("LEAVE TEAM ERROR:", error);
-    res.status(500).json({ message: "Server error while leaving team" });
+
+    res.status(500).json({
+      message: "Server error while leaving team",
+    });
   }
 };
 
-
-
-module.exports = { createTeam, joinTeam, getMyTeam, leaveTeam };
+module.exports = {
+  createTeam,
+  joinTeam,
+  getMyTeam,
+  updateMyTeam,
+  leaveTeam,
+};
