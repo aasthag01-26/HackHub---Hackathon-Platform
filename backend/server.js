@@ -10,6 +10,7 @@ const teamRoute = require("./routes/teamRoute.js");
 const taskRoute = require("./routes/taskRoute.js");
 const askGeminiRoute = require("./routes/askGeminiRoute.js");
 const fileRoutes = require("./routes/fileRoute.js");
+const projectRoute = require("./routes/projectRoute.js");
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/teams", teamRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/gemini", askGeminiRoute);
 app.use("/api/files", fileRoutes);
+app.use("/api/projects", projectRoute);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
