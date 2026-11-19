@@ -13,12 +13,17 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    username?: string;
+    email?: string;
+    password?: string;
+  }>({});
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // ✅ Backend URL (from .env)
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-  console.log("✅ Current API_URL:", API_URL);
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // ✅ Delay auth check briefly to prevent flicker
   useEffect(() => {
@@ -39,27 +44,53 @@ export default function Auth() {
     }
   }, [isAuthenticated, router, isCheckingAuth]);
 
+  // Validate form inputs
+  const validateForm = (isSignup: boolean): boolean => {
+    const errors: { username?: string; email?: string; password?: string } = {};
+
+    if (isSignup && (!username || username.trim().length < 2)) {
+      errors.username = "Name must be at least 2 characters long.";
+    }
+
+    if (!email || !email.trim()) {
+      errors.email = "Email address is required.";
+    } else if (!emailRegex.test(email.trim())) {
+      errors.email = "Please enter a valid email address (e.g. name@domain.com).";
+    }
+
+    if (!password) {
+      errors.password = "Password is required.";
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters long.";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // ✅ LOGIN HANDLER
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!validateForm(false)) {
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
 
-      
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Login failed: ${text}`);
+        throw new Error(data.message || "Invalid email or password. Please try again.");
       }
-
-      const data = await res.json();
-
 
       // Save token + auth state
       localStorage.setItem("token", data.token);
@@ -80,21 +111,29 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!validateForm(true)) {
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch(`${API_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: username, email, password }),
+        body: JSON.stringify({
+          name: username.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Signup failed: ${text}`);
-      }
+      const data = await res.json().catch(() => ({}));
 
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Signup failed. Please try again.");
+      }
 
       // Save token + auth state
       localStorage.setItem("token", data.token);
@@ -102,7 +141,7 @@ export default function Auth() {
       localStorage.setItem("fromSignup", "true");
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      login(username, password);
+      login(username.trim(), password);
       router.push("/team-setup");
     } catch (err: any) {
       console.error("Signup error:", err);
@@ -123,7 +162,6 @@ export default function Auth() {
 
   if (isAuthenticated) return null;
 
-  // ✅ UI
   return (
     <div className="min-h-screen gradient-bg bg-pattern flex items-center justify-center p-4 relative overflow-hidden">
       <Head>
@@ -131,7 +169,7 @@ export default function Auth() {
       </Head>
 
       {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="background-orb absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl"></div>
         <div className="background-orb absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl"></div>
         <div className="background-orb absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
@@ -160,24 +198,25 @@ export default function Auth() {
 
               <div className="space-y-4">
                 <button
-                  onClick={() => setView("login")}
+                  onClick={() => {
+                    setError("");
+                    setFieldErrors({});
+                    setView("login");
+                  }}
                   className="w-full bg-slate-700/50 hover:bg-slate-600/50 text-white font-semibold py-4 px-6 rounded-xl border border-slate-600/50 transition-all duration-300"
                 >
                   Login to Existing Account
                 </button>
 
                 <button
-                  onClick={() => setView("signup")}
+                  onClick={() => {
+                    setError("");
+                    setFieldErrors({});
+                    setView("signup");
+                  }}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
-                  Create New Team
-                </button>
-
-                <button
-                  onClick={() => setView("join")}
-                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  Join Team with Code
+                  Create New Account & Team
                 </button>
               </div>
             </div>
@@ -186,50 +225,74 @@ export default function Auth() {
           {/* Login View */}
           {view === "login" && (
             <div>
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
-                <p className="text-slate-300">Sign in to your account</p>
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => {
+                    setError("");
+                    setFieldErrors({});
+                    setView("initial");
+                  }}
+                  className="text-xs text-slate-400 hover:text-white transition-colors"
+                >
+                  ← Back
+                </button>
+                <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+                <div className="w-8"></div>
               </div>
 
               {error && (
-                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-                  <p className="text-red-300 text-center">{error}</p>
+                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+                  <p className="text-red-300 text-center text-sm">{error}</p>
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-5" noValidate>
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-2">
-                    Email
+                  <label className="block text-sm font-medium text-slate-200 mb-1.5">
+                    Email Address
                   </label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Enter your email"
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined });
+                    }}
+                    className={`w-full px-4 py-3 bg-slate-700/50 border ${
+                      fieldErrors.email ? "border-red-500 focus:ring-red-500" : "border-slate-600/50 focus:ring-purple-500"
+                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-200`}
+                    placeholder="e.g. participant@hackhub.com"
                   />
+                  {fieldErrors.email && (
+                    <p className="text-red-400 text-xs mt-1.5">{fieldErrors.email}</p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-1.5">
                     Password
                   </label>
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: undefined });
+                    }}
+                    className={`w-full px-4 py-3 bg-slate-700/50 border ${
+                      fieldErrors.password ? "border-red-500 focus:ring-red-500" : "border-slate-600/50 focus:ring-purple-500"
+                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-200`}
                     placeholder="Enter your password"
-                    required
                   />
+                  {fieldErrors.password && (
+                    <p className="text-red-400 text-xs mt-1.5">{fieldErrors.password}</p>
+                  )}
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </button>
@@ -240,56 +303,97 @@ export default function Auth() {
           {/* Signup View */}
           {view === "signup" && (
             <div>
-              <h2 className="text-2xl font-bold text-center mb-6 text-slate-100">
-                Create Your Team
-              </h2>
-              {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-              <form onSubmit={handleSignup}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1 text-slate-300">
-                    Your Name (Leader)
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => {
+                    setError("");
+                    setFieldErrors({});
+                    setView("initial");
+                  }}
+                  className="text-xs text-slate-400 hover:text-white transition-colors"
+                >
+                  ← Back
+                </button>
+                <h2 className="text-2xl font-bold text-white">Create Account</h2>
+                <div className="w-8"></div>
+              </div>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+                  <p className="text-red-300 text-center text-sm">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSignup} className="space-y-4" noValidate>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                    Full Name
                   </label>
                   <input
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-slate-100"
-                    required
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (fieldErrors.username) setFieldErrors({ ...fieldErrors, username: undefined });
+                    }}
+                    placeholder="e.g. Alex Morgan"
+                    className={`w-full px-4 py-3 bg-slate-700/50 border ${
+                      fieldErrors.username ? "border-red-500 focus:ring-red-500" : "border-slate-600/50 focus:ring-purple-500"
+                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-200`}
                   />
+                  {fieldErrors.username && (
+                    <p className="text-red-400 text-xs mt-1.5">{fieldErrors.username}</p>
+                  )}
                 </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1 text-slate-300">
-                    Email
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                    Email Address
                   </label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-slate-100"
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined });
+                    }}
+                    placeholder="e.g. alex@university.edu"
+                    className={`w-full px-4 py-3 bg-slate-700/50 border ${
+                      fieldErrors.email ? "border-red-500 focus:ring-red-500" : "border-slate-600/50 focus:ring-purple-500"
+                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-200`}
                   />
+                  {fieldErrors.email && (
+                    <p className="text-red-400 text-xs mt-1.5">{fieldErrors.email}</p>
+                  )}
                 </div>
 
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-1 text-slate-300">
-                    Password
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                    Password (min. 6 characters)
                   </label>
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-slate-100"
-                    required
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: undefined });
+                    }}
+                    placeholder="Choose a strong password"
+                    className={`w-full px-4 py-3 bg-slate-700/50 border ${
+                      fieldErrors.password ? "border-red-500 focus:ring-red-500" : "border-slate-600/50 focus:ring-purple-500"
+                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-200`}
                   />
+                  {fieldErrors.password && (
+                    <p className="text-red-400 text-xs mt-1.5">{fieldErrors.password}</p>
+                  )}
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 >
-                  {loading ? "Creating..." : "Sign Up & Create Team"}
+                  {loading ? "Creating Account..." : "Sign Up & Get Started"}
                 </button>
               </form>
             </div>
