@@ -12,6 +12,7 @@ import {
   LogOut,
   Rocket,
   Compass,
+  BarChart3,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -51,6 +52,7 @@ const Layout = ({ children }: LayoutProps) => {
     { name: "Pitch", href: "/pitch", icon: Mic },
     { name: "Team", href: "/team", icon: Users },
     { name: "Hackathons", href: "/hackathons", icon: Compass },
+    { name: "Analytics", href: "/analytics", icon: BarChart3 },
   ];
 
   const handleLogout = () => {
