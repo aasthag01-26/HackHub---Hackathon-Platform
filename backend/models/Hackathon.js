@@ -1,130 +1,86 @@
 const mongoose = require("mongoose");
 
-const prizeSchema = new mongoose.Schema({
-  place: { type: String, required: true },
-  reward: { type: String, required: true },
-  description: { type: String, default: "" },
-});
-
-const timelineSchema = new mongoose.Schema({
-  phase: { type: String, required: true },
-  date: { type: String, required: true },
-  details: { type: String, default: "" },
-});
-
-const registrationItemSchema = new mongoose.Schema({
-  teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team", default: null },
-  teamName: { type: String, required: true },
-  leadUser: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  leadName: { type: String, default: "Team Leader" },
-  leadEmail: { type: String, default: "" },
-  membersCount: { type: Number, default: 1 },
-  projectTitle: { type: String, default: "" },
-  projectTrack: { type: String, default: "General" },
-  registeredAt: { type: Date, default: Date.now },
-  status: {
-    type: String,
-    enum: ["Registered", "Under Review", "Accepted", "Rejected"],
-    default: "Registered",
+const prizeSchema = new mongoose.Schema(
+  {
+    place: { type: String, required: true, trim: true, maxlength: 40 },
+    description: { type: String, required: true, trim: true, maxlength: 300 },
   },
-});
+  { _id: false }
+);
+
+const timelineSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true, maxlength: 120 },
+    date: { type: Date, required: true },
+    description: { type: String, trim: true, maxlength: 500, default: "" },
+  },
+  { _id: false }
+);
+
+const registrationSchema = new mongoose.Schema(
+  {
+    student: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+    teamName: { type: String, trim: true, maxlength: 120 },
+    projectName: { type: String, trim: true, maxlength: 120 },
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "rejected"],
+      default: "pending",
+    },
+    registeredAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
+
+const resultSchema = new mongoose.Schema(
+  {
+    place: { type: String, required: true, trim: true, maxlength: 40 },
+    teamName: { type: String, required: true, trim: true, maxlength: 120 },
+    projectName: { type: String, trim: true, maxlength: 120, default: "" },
+    description: { type: String, trim: true, maxlength: 500, default: "" },
+  },
+  { _id: false }
+);
 
 const hackathonSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      required: [true, "Hackathon title is required"],
-      trim: true,
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      default: null,
     },
-    tagline: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    description: {
-      type: String,
-      required: [true, "Description is required"],
-      trim: true,
-    },
-    organizer: {
-      type: String,
-      required: true,
-      trim: true,
-      default: "HackHub Global",
-    },
-    domain: {
-      type: String,
-      enum: [
-        "All Domains",
-        "AI / ML",
-        "Web3 & Blockchain",
-        "Cloud & DevOps",
-        "FinTech",
-        "HealthTech",
-        "Cybersecurity",
-        "Open Innovation",
-        "EdTech",
-      ],
-      default: "Open Innovation",
-    },
+    organizationName: { type: String, trim: true, maxlength: 120, default: "" },
+    organizationWebsite: { type: String, trim: true, maxlength: 300, default: "" },
+    title: { type: String, required: true, trim: true, maxlength: 120 },
+    description: { type: String, required: true, trim: true, maxlength: 5000 },
+    domain: { type: String, trim: true, maxlength: 80, default: "" },
     mode: {
       type: String,
-      enum: ["Online", "In-Person", "Hybrid"],
-      default: "Online",
-    },
-    location: {
-      type: String,
-      trim: true,
-      default: "Virtual / Global",
-    },
-    prizePool: {
-      type: String,
-      default: "$10,000",
-      trim: true,
-    },
-    prizes: [prizeSchema],
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-      required: true,
-    },
-    registrationDeadline: {
-      type: Date,
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["Upcoming", "Ongoing", "Completed"],
-      default: "Upcoming",
-    },
-    eligibility: {
-      type: String,
-      default: "Open to all undergraduate, graduate, and high school students worldwide.",
-    },
-    rules: [{ type: String, trim: true }],
-    timeline: [timelineSchema],
-    imageUrl: {
-      type: String,
+      enum: ["", "online", "in_person", "hybrid"],
       default: "",
     },
-    bookmarks: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    registrations: [registrationItemSchema],
+    eligibility: { type: String, required: true, trim: true, maxlength: 2000 },
+    rules: { type: [String], default: [] },
+    registrationDeadline: { type: Date, required: true },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    prizes: { type: [prizeSchema], required: true },
+    timeline: { type: [timelineSchema], default: [] },
+    published: { type: Boolean, default: false },
+    stage: {
+      type: String,
+      enum: ["registration", "judging", "completed"],
+      default: "registration",
+    },
+    registrations: { type: [registrationSchema], default: [] },
+    results: { type: [resultSchema], default: [] },
+    resultsPublished: { type: Boolean, default: false },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-hackathonSchema.index({ domain: 1, mode: 1, status: 1 });
-hackathonSchema.index({ registrationDeadline: 1 });
-hackathonSchema.index({ title: "text", description: "text", organizer: "text" });
+hackathonSchema.index({ published: 1, startDate: 1 });
+hackathonSchema.index({ published: 1, domain: 1, mode: 1 });
 
 module.exports = mongoose.model("Hackathon", hackathonSchema);

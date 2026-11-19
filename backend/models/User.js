@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema({
         ref: 'Team',
         default: null,
     },
+    bookmarkedHackathons: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Hackathon',
+    }],
 }, {
     timestamps: true,
 });

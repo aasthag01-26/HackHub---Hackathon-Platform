@@ -9,6 +9,7 @@ import {
   FileText,
   Mic,
   Users,
+  Search,
   LogOut,
   Rocket,
 
@@ -78,10 +79,7 @@ const Layout = ({ children }: LayoutProps) => {
     { name: "Files", href: "/files", icon: FileText },
     { name: "Pitch", href: "/pitch", icon: Mic },
     { name: "Team", href: "/team", icon: Users },
-
-    { name: "Mentors", href: "/mentors", icon: GraduationCap },
-    { name: "Hackathons", href: "/hackathons", icon: Compass },
-    
+    { name: "Hackathons", href: "/hackathons", icon: Search },
   ];
 
   const handleLogout = () => {

@@ -5,6 +5,15 @@ project tasks, team coordination, shared files, chat, deadlines, and pitch
 generation into one place.
 
 ## Features
+- User Authentication
+- Published hackathon discovery, filtering, and bookmarks
+- Team Creation and Management
+- Team Member Collaboration
+- Task Management
+- Project Deadline Tracking
+- AI-powered Pitch Generation
+- File Management
+- AI-powered Text Summarization
 
 - **Authentication:** Sign up and log in through the Express API, with user
   records stored in MongoDB.
