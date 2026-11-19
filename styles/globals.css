@@ -38,6 +38,19 @@ textarea::placeholder {
   color: #64748b; /* slate-500 */
 }
 
+/* Ensure select dropdown options have solid dark background and high-contrast text */
+select option {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #334155 !important;
+  color: #38bdf8 !important;
+}
+
 .modal-backdrop {
   background-color: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
