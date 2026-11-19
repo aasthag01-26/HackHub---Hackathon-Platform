@@ -18,6 +18,7 @@ import {
   Compass,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -26,7 +27,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const { logout, currentUser } = useAppContext();
+  const { logout, currentUser, unreadNotificationCount } = useAppContext();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isLocallyAuthenticated, setIsLocallyAuthenticated] = useState(false);
@@ -82,6 +83,9 @@ const Layout = ({ children }: LayoutProps) => {
     { name: "AI Pitch Copilot", href: "/pitch", icon: Sparkles },
     { name: "Profile", href: "/profile", icon: User },
   ];
+  const isNotificationsActive = router.pathname === "/notifications";
+  const unreadBadge = unreadNotificationCount > 99 ? "99+" : unreadNotificationCount;
+
   const handleLogout = () => {
     logout();
     localStorage.removeItem("isAuthenticated");
@@ -107,16 +111,37 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
           <span className="text-lg font-semibold tracking-tight">HackHub</span>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
-          className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-800/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          aria-controls="mobile-navigation"
-          aria-expanded={isMobileMenuOpen}
-          aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-        >
-          {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/notifications"
+            aria-label={
+              unreadNotificationCount > 0
+                ? `Notifications, ${unreadNotificationCount} unread`
+                : "Notifications"
+            }
+            aria-current={isNotificationsActive ? "page" : undefined}
+            className={`relative rounded-lg p-2 transition-colors hover:bg-gray-800/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+              isNotificationsActive ? "text-cyan-300" : "text-gray-300"
+            }`}
+          >
+            <Bell className="h-6 w-6" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-[18px] text-white">
+                {unreadBadge}
+              </span>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
+            className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-800/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            aria-controls="mobile-navigation"
+            aria-expanded={isMobileMenuOpen}
+            aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </header>
 
       {isMobileMenuOpen && (
@@ -199,6 +224,29 @@ const Layout = ({ children }: LayoutProps) => {
           <h1 className="text-2xl font-semibold">HackHub</h1>
           <p className="text-sm text-zinc-300 mt-1">Innovate. Collaborate. Launch.</p>
         </div>
+
+        {/* Notifications: single entry point, goes straight to the full-page Notification Center */}
+        <Link
+          href="/notifications"
+          aria-current={isNotificationsActive ? "page" : undefined}
+          className={`mb-4 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+            isNotificationsActive
+              ? "border-cyan-500/50 bg-gradient-to-r from-cyan-600 to-purple-600 text-white"
+              : "border-slate-700/60 bg-slate-800/60 text-slate-200 hover:bg-slate-800"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Bell className={`h-4 w-4 ${isNotificationsActive ? "text-white" : "text-sky-400"}`} />
+            Notifications
+          </span>
+          {unreadNotificationCount > 0 ? (
+            <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
+              {unreadBadge}
+            </span>
+          ) : (
+            <span className="text-[11px] text-slate-500">All read</span>
+          )}
+        </Link>
 
         <nav className="flex-1">
           <ul className="space-y-2">

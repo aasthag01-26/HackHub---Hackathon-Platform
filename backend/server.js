@@ -15,6 +15,7 @@ const profileRoute = require("./routes/profileRoute.js");
 
 const mentorRoute = require("./routes/mentorRoute.js");
 const hackathonRoute = require("./routes/hackathonRoute.js");
+const notificationRoute = require("./routes/notificationRoute.js");
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use("/api/profile", profileRoute);
 
 app.use("/api/mentors", mentorRoute);
 app.use("/api/hackathons", hackathonRoute);
+app.use("/api/notifications", notificationRoute);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
