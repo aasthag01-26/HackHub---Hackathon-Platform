@@ -13,6 +13,7 @@ const fileRoutes = require("./routes/fileRoute.js");
 
 const mentorRoute = require("./routes/mentorRoute.js");
 const hackathonRoute = require("./routes/hackathonRoute.js");
+const organizerRoute = require("./routes/organizerRoute.js");
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/files", fileRoutes);
 
 app.use("/api/mentors", mentorRoute);
 app.use("/api/hackathons", hackathonRoute);
+app.use("/api/organizer", organizerRoute);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;

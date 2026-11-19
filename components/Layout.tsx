@@ -14,10 +14,9 @@ import {
 
   GraduationCap,
   Compass,
-
+  Calendar,
   Menu,
   X,
-  
 } from "lucide-react";
 
 interface LayoutProps {
@@ -81,7 +80,7 @@ const Layout = ({ children }: LayoutProps) => {
 
     { name: "Mentors", href: "/mentors", icon: GraduationCap },
     { name: "Hackathons", href: "/hackathons", icon: Compass },
-    
+    { name: "Organizer", href: "/organizer", icon: Calendar },
   ];
 
   const handleLogout = () => {

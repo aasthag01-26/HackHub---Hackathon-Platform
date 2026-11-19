@@ -97,11 +97,13 @@ export default function Hackathons() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [regMessage, setRegMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
+
   const fetchHackathons = async () => {
     try {
       setLoading(true);
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      let url = "/api/hackathons";
+      let url = `${API_BASE}/api/hackathons`;
       const params = new URLSearchParams();
 
       if (selectedDomain !== "All Domains") params.append("domain", selectedDomain);
@@ -226,7 +228,7 @@ export default function Hackathons() {
     );
 
     try {
-      await fetch(`/api/hackathons/${hackathonId}/bookmark`, {
+      await fetch(`${API_BASE}/api/hackathons/${hackathonId}/bookmark`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -259,7 +261,7 @@ export default function Hackathons() {
         projectTrack: regTrack,
       };
 
-      const res = await fetch(`/api/hackathons/${selectedHackathon._id}/register`, {
+      const res = await fetch(`${API_BASE}/api/hackathons/${selectedHackathon._id}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
