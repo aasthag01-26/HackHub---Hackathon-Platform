@@ -10,6 +10,7 @@ const teamRoute = require("./routes/teamRoute.js");
 const taskRoute = require("./routes/taskRoute.js");
 const askGeminiRoute = require("./routes/askGeminiRoute.js");
 const fileRoutes = require("./routes/fileRoute.js");
+const chatRoute = require("./routes/chatRoute.js");
 
 const mentorRoute = require("./routes/mentorRoute.js");
 const hackathonRoute = require("./routes/hackathonRoute.js");
@@ -46,6 +47,7 @@ app.use("/api/teams", teamRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/gemini", askGeminiRoute);
 app.use("/api/files", fileRoutes);
+app.use("/api/chat", chatRoute);
 
 app.use("/api/mentors", mentorRoute);
 app.use("/api/hackathons", hackathonRoute);
