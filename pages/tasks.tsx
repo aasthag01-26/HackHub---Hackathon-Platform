@@ -20,17 +20,21 @@ export default function Tasks() {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [updateAssignee, setUpdateAssignee] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState<
     "To Do" | "In Progress" | "Done"
   >("To Do");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 300); // Reduced from 500ms to 300ms
+    }, 300);
 
     return () => clearTimeout(timer);
   }, []);
@@ -41,6 +45,46 @@ export default function Tasks() {
     }
   }, [isAuthenticated, router, isLoading]);
 
+  // Fetch team tasks on mount / authentication
+  const fetchTasks = useCallback(async () => {
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+
+    const API_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+    try {
+      const res = await fetch(`${API_URL}/tasks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setTasks(
+            data.map((t: any) => ({
+              id: t._id,
+              _id: t._id,
+              title: t.title,
+              description: t.description || "",
+              status: t.status || "To Do",
+              assignee: t.assignedTo?.name || "Unassigned",
+              assignedTo: t.assignedTo?._id || null,
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load tasks:", err);
+    }
+  }, [setTasks]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchTasks();
+    }
+  }, [isAuthenticated, fetchTasks]);
+
   // Memoized task filtering for better performance
   const todoTasks = tasks.filter((task) => task.status === "To Do");
   const inProgressTasks = tasks.filter((task) => task.status === "In Progress");
@@ -49,27 +93,86 @@ export default function Tasks() {
 
   const openAddTaskModal = useCallback(() => {
     setNewTaskTitle("");
-    setNewTaskAssignee(teamMembers.length > 0 ? teamMembers[0].name : "");
+    setNewTaskDescription("");
+    setNewTaskAssignee("");
+    setModalError(null);
     setShowAddTaskModal(true);
-  }, [teamMembers]);
+  }, []);
 
   const closeAddTaskModal = useCallback(() => {
     setShowAddTaskModal(false);
+    setModalError(null);
   }, []);
 
-  const handleAddTask = useCallback(() => {
-    if (!newTaskTitle) return;
+  const handleAddTask = useCallback(async () => {
+    if (!newTaskTitle.trim()) return;
 
-    addTaskToContext({
-      id: `task-${Date.now()}`,
-      title: newTaskTitle,
-      description: "",
-      assignee: newTaskAssignee,
-      status: "To Do",
-    });
+    setIsSubmitting(true);
+    setModalError(null);
 
-    closeAddTaskModal();
-  }, [newTaskTitle, newTaskAssignee, addTaskToContext, closeAddTaskModal]);
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const API_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+    try {
+      if (token) {
+        const res = await fetch(`${API_URL}/tasks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: newTaskTitle.trim(),
+            description: newTaskDescription.trim(),
+            assignedTo: newTaskAssignee || null,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || "Failed to create task");
+        }
+
+        const data = await res.json();
+        addTaskToContext({
+          id: data._id,
+          _id: data._id,
+          title: data.title,
+          description: data.description || "",
+          status: data.status || "To Do",
+          assignee: data.assignedTo?.name || "Unassigned",
+          assignedTo: data.assignedTo?._id || null,
+        });
+      } else {
+        const assignedMember = teamMembers.find(
+          (m) => m.id === newTaskAssignee
+        );
+        addTaskToContext({
+          id: `task-${Date.now()}`,
+          title: newTaskTitle.trim(),
+          description: newTaskDescription.trim(),
+          assignee: assignedMember ? assignedMember.name : "Unassigned",
+          status: "To Do",
+        });
+      }
+
+      closeAddTaskModal();
+    } catch (err: any) {
+      console.error("Error creating task:", err);
+      setModalError(err.message || "Failed to create task");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    newTaskTitle,
+    newTaskDescription,
+    newTaskAssignee,
+    teamMembers,
+    addTaskToContext,
+    closeAddTaskModal,
+  ]);
 
   const openUpdateTaskModal = useCallback(
     (taskId: string) => {
@@ -77,6 +180,8 @@ export default function Tasks() {
       if (task) {
         setCurrentTaskId(taskId);
         setNewTaskStatus(task.status);
+        setUpdateAssignee(task.assignedTo || "");
+        setModalError(null);
         setShowUpdateTaskModal(true);
       }
     },
@@ -86,13 +191,70 @@ export default function Tasks() {
   const closeUpdateTaskModal = useCallback(() => {
     setShowUpdateTaskModal(false);
     setCurrentTaskId(null);
+    setModalError(null);
   }, []);
 
-  const handleUpdateTaskStatus = useCallback(() => {
+  const handleUpdateTaskStatus = useCallback(async () => {
     if (currentTaskId === null) return;
-    updateTaskInContext(currentTaskId, { status: newTaskStatus });
-    closeUpdateTaskModal();
-  }, [currentTaskId, newTaskStatus, updateTaskInContext, closeUpdateTaskModal]);
+
+    setIsSubmitting(true);
+    setModalError(null);
+
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const API_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+    try {
+      if (token && !currentTaskId.startsWith("task-")) {
+        const res = await fetch(`${API_URL}/tasks/${currentTaskId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status: newTaskStatus,
+            assignedTo: updateAssignee || null,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || "Failed to update task");
+        }
+
+        const data = await res.json();
+        updateTaskInContext(currentTaskId, {
+          status: data.status,
+          assignee: data.assignedTo?.name || "Unassigned",
+          assignedTo: data.assignedTo?._id || null,
+        });
+      } else {
+        const assignedMember = teamMembers.find(
+          (m) => m.id === updateAssignee
+        );
+        updateTaskInContext(currentTaskId, {
+          status: newTaskStatus,
+          assignee: assignedMember ? assignedMember.name : "Unassigned",
+        });
+      }
+
+      closeUpdateTaskModal();
+    } catch (err: any) {
+      console.error("Error updating task:", err);
+      setModalError(err.message || "Failed to update task");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    currentTaskId,
+    newTaskStatus,
+    updateAssignee,
+    teamMembers,
+    updateTaskInContext,
+    closeUpdateTaskModal,
+  ]);
 
   const openDeleteTaskModal = useCallback((taskId: string) => {
     setSelectedTaskId(taskId);
@@ -104,10 +266,39 @@ export default function Tasks() {
     setSelectedTaskId(null);
   }, []);
 
-  const handleDeleteTask = useCallback(() => {
+  const handleDeleteTask = useCallback(async () => {
     if (selectedTaskId === null) return;
-    setTasks(tasks.filter((task) => task.id !== selectedTaskId));
-    closeDeleteTaskModal();
+
+    setIsSubmitting(true);
+
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const API_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+    try {
+      if (token && !selectedTaskId.startsWith("task-")) {
+        const res = await fetch(`${API_URL}/tasks/${selectedTaskId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || "Failed to delete task");
+        }
+      }
+
+      setTasks(tasks.filter((task) => task.id !== selectedTaskId));
+      closeDeleteTaskModal();
+    } catch (err: any) {
+      console.error("Error deleting task:", err);
+      alert(err.message || "Failed to delete task");
+    } finally {
+      setIsSubmitting(false);
+    }
   }, [selectedTaskId, tasks, setTasks, closeDeleteTaskModal]);
 
   useEffect(() => {
@@ -165,6 +356,11 @@ export default function Tasks() {
                   className="glass rounded-xl p-4 transition-all duration-300"
                 >
                   <p className="text-heading-sm font-heading">{task.title}</p>
+                  {task.description && (
+                    <p className="text-body-xs font-body text-zinc-300 mt-1">
+                      {task.description}
+                    </p>
+                  )}
                   <p className="text-body-sm font-body text-zinc-400 mt-1">
                     Assigned to: {task.assignee}
                   </p>
@@ -203,6 +399,11 @@ export default function Tasks() {
                   className="glass rounded-xl p-4 transition-all duration-300"
                 >
                   <p className="text-heading-sm font-heading">{task.title}</p>
+                  {task.description && (
+                    <p className="text-body-xs font-body text-zinc-300 mt-1">
+                      {task.description}
+                    </p>
+                  )}
                   <p className="text-body-sm font-body text-zinc-400 mt-1">
                     Assigned to: {task.assignee}
                   </p>
@@ -245,6 +446,11 @@ export default function Tasks() {
                   <p className="text-heading-sm font-heading line-through">
                     {task.title}
                   </p>
+                  {task.description && (
+                    <p className="text-body-xs font-body text-zinc-400 mt-1 line-through">
+                      {task.description}
+                    </p>
+                  )}
                   <p className="text-body-sm font-body text-zinc-400 mt-1">
                     Assigned to: {task.assignee}
                   </p>
@@ -279,6 +485,11 @@ export default function Tasks() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
           <div className="card w-full max-w-lg">
             <h2 className="text-heading-xl font-heading mb-6">Add New Task</h2>
+            {modalError && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-300 text-body-sm">
+                {modalError}
+              </div>
+            )}
             <div>
               <div className="mb-4">
                 <label className="label-enhanced">Task Title</label>
@@ -286,21 +497,32 @@ export default function Tasks() {
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="e.g. Implement OAuth login"
                   className="input-enhanced w-full"
                   required
                 />
               </div>
+              <div className="mb-4">
+                <label className="label-enhanced">Description (Optional)</label>
+                <textarea
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                  placeholder="Provide any additional task details..."
+                  className="input-enhanced w-full"
+                  rows={2}
+                />
+              </div>
               <div className="mb-6">
-                <label className="label-enhanced">Assign To</label>
+                <label className="label-enhanced">Assign To Team Member</label>
                 <select
                   value={newTaskAssignee}
                   onChange={(e) => setNewTaskAssignee(e.target.value)}
                   className="input-enhanced w-full"
-                  required
                 >
+                  <option value="">Unassigned</option>
                   {teamMembers.map((member) => (
-                    <option key={member.id} value={member.name}>
-                      {member.name}
+                    <option key={member.id} value={member.id}>
+                      {member.name} ({member.role || "Member"})
                     </option>
                   ))}
                 </select>
@@ -309,6 +531,7 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={closeAddTaskModal}
+                  disabled={isSubmitting}
                   className="w-full btn-secondary"
                 >
                   Cancel
@@ -316,9 +539,17 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={handleAddTask}
-                  className="w-full btn-primary"
+                  disabled={isSubmitting || !newTaskTitle.trim()}
+                  className="w-full btn-primary flex items-center justify-center gap-2"
                 >
-                  Add Task
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add Task"
+                  )}
                 </button>
               </div>
             </div>
@@ -333,8 +564,13 @@ export default function Tasks() {
             <h2 className="text-heading-xl font-heading mb-6">
               Update Task Status
             </h2>
+            {modalError && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-300 text-body-sm">
+                {modalError}
+              </div>
+            )}
             <div>
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="label-enhanced">New Status</label>
                 <select
                   value={newTaskStatus}
@@ -351,10 +587,26 @@ export default function Tasks() {
                   <option value="Done">Done</option>
                 </select>
               </div>
+              <div className="mb-6">
+                <label className="label-enhanced">Assignee</label>
+                <select
+                  value={updateAssignee}
+                  onChange={(e) => setUpdateAssignee(e.target.value)}
+                  className="input-enhanced w-full"
+                >
+                  <option value="">Unassigned</option>
+                  {teamMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name} ({member.role || "Member"})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={closeUpdateTaskModal}
+                  disabled={isSubmitting}
                   className="w-full btn-secondary"
                 >
                   Cancel
@@ -362,9 +614,17 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={handleUpdateTaskStatus}
-                  className="w-full btn-primary"
+                  disabled={isSubmitting}
+                  className="w-full btn-primary flex items-center justify-center gap-2"
                 >
-                  Update
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update"
+                  )}
                 </button>
               </div>
             </div>
@@ -401,6 +661,7 @@ export default function Tasks() {
               <button
                 type="button"
                 onClick={closeDeleteTaskModal}
+                disabled={isSubmitting}
                 className="w-full btn-secondary"
               >
                 Cancel
@@ -408,9 +669,10 @@ export default function Tasks() {
               <button
                 type="button"
                 onClick={handleDeleteTask}
+                disabled={isSubmitting}
                 className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900"
               >
-                Confirm Delete
+                {isSubmitting ? "Deleting..." : "Confirm Delete"}
               </button>
             </div>
           </div>

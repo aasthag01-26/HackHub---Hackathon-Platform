@@ -9,10 +9,12 @@ import {
 // ------------------- Types -------------------
 interface Task {
   id: string;
+  _id?: string;
   title: string;
   description: string;
   status: "To Do" | "In Progress" | "Done";
   assignee: string;
+  assignedTo?: string | null;
   dueDate?: Date;
 }
 
@@ -166,6 +168,67 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, [isAuthenticated, isInitialized]);
 
+  // ------------------- Sync Team & Tasks from Backend -------------------
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const API_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+    // 1. Fetch team members
+    fetch(`${API_URL}/teams/myteam`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || !data.team) return;
+
+        setTeamName(data.team.name);
+        if (data.team.members && Array.isArray(data.team.members)) {
+          setTeamMembers(
+            data.team.members
+              .filter((m: any) => m.user)
+              .map((m: any) => ({
+                id: m.user._id,
+                name: m.user.name,
+                role: m.role || "member",
+                avatar: `https://placehold.co/40x40/38bdf8/ffffff?text=${(
+                  m.user.name || "U"
+                )
+                  .charAt(0)
+                  .toUpperCase()}`,
+              }))
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to load team:", err));
+
+    // 2. Fetch team tasks
+    fetch(`${API_URL}/tasks`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setTasks(
+            data.map((t: any) => ({
+              id: t._id,
+              _id: t._id,
+              title: t.title,
+              description: t.description || "",
+              status: t.status || "To Do",
+              assignee: t.assignedTo?.name || "Unassigned",
+              assignedTo: t.assignedTo?._id || null,
+            }))
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to load tasks:", err));
+  }, [isAuthenticated]);
+
   // ------------------- Hackathon Timer Persistence -------------------
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -217,10 +280,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const logout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setTeamName("My Team");
+    setTeamMembers([]);
+    setTasks([]);
 
     if (typeof window !== "undefined") {
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     }
   };
 

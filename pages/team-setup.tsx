@@ -56,26 +56,57 @@ export default function TeamSetup() {
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Update team name
-      updateTeamName(teamName);
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-      // Update team bio
+      // 1. Create team in MongoDB backend
+      const res = await fetch(`${API_URL}/teams`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: teamName.trim() }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to create team in backend.");
+      }
+
+      const data = await res.json();
+      const createdTeam = data.team;
+
+      // 2. Update user in localStorage with new teamId
+      const savedUserStr = localStorage.getItem("user");
+      if (savedUserStr) {
+        try {
+          const userObj = JSON.parse(savedUserStr);
+          userObj.teamId = createdTeam._id;
+          userObj.role = "leader";
+          localStorage.setItem("user", JSON.stringify(userObj));
+        } catch (e) {
+          console.error("Error updating user in localStorage:", e);
+        }
+      }
+
+      // 3. Update local state
+      updateTeamName(teamName);
       updateTeamBio(teamBio);
 
-      // Update deadline
       if (deadline) {
         updateDeadline(new Date(deadline));
       }
 
-      // Add team members
+      // Add team members to context
       members.forEach((member) => {
         if (member.name && member.role) {
-          // Create a simple avatar based on first letter of name
           const firstLetter = member.name.charAt(0).toUpperCase();
           const avatar = `https://placehold.co/40x40/38bdf8/ffffff?text=${firstLetter}`;
 
@@ -87,16 +118,12 @@ export default function TeamSetup() {
         }
       });
 
-      // Generate a random invite code
-      const generatedCode = `HACK-${Math.random()
-        .toString(36)
-        .substring(2, 6)
-        .toUpperCase()}`;
-      setInviteCode(generatedCode);
-
+      // Use real invite code from MongoDB
+      setInviteCode(createdTeam.inviteCode);
       setSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error setting up team:", error);
+      alert(error.message || "Error setting up team. Please try again.");
     } finally {
       setLoading(false);
     }

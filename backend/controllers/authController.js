@@ -33,6 +33,8 @@ const registerUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
+        teamId: user.teamId,
       },
       token,
     });
@@ -72,6 +74,8 @@ const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
+        teamId: user.teamId,
       },
       token,
     });
@@ -87,7 +91,7 @@ const loginUser = async (req, res) => {
 ===================================== */
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("name email");
+    const user = await User.findById(req.user._id).select("name email role teamId");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json(user);
   } catch (error) {
