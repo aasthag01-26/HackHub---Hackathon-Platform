@@ -151,6 +151,22 @@ export default function Tasks() {
         task card to move it to a different column, helping everyone stay
         synchronized on the project's workflow.
       </p>
+
+      {tasks.length === 0 && (
+        <div className="card mb-6 text-center py-8 border border-dashed border-cyan-500/40 bg-slate-800/30">
+          <span className="text-4xl block mb-2">📋</span>
+          <h3 className="text-heading-md font-heading mb-1 text-slate-200">
+            No Tasks Created Yet
+          </h3>
+          <p className="text-body-sm font-body text-zinc-400 max-w-md mx-auto mb-4">
+            Start organizing your project deliverables by adding your first task to your team's Kanban board.
+          </p>
+          <button onClick={openAddTaskModal} className="btn-primary text-sm">
+            + Add Your First Task
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* To Do */}
         <div className="card">
@@ -186,7 +202,10 @@ export default function Tasks() {
                 </div>
               ))
             ) : (
-              <p className="text-zinc-400 text-center py-4">No tasks to do</p>
+              <div className="border border-dashed border-slate-700/60 rounded-xl p-6 text-center text-zinc-400">
+                <p className="text-sm">No tasks in To Do</p>
+                <p className="text-xs text-zinc-500 mt-1">Tasks waiting to start will appear here.</p>
+              </div>
             )}
           </div>
         </div>
@@ -224,9 +243,10 @@ export default function Tasks() {
                 </div>
               ))
             ) : (
-              <p className="text-zinc-400 text-center py-4">
-                No tasks in progress
-              </p>
+              <div className="border border-dashed border-slate-700/60 rounded-xl p-6 text-center text-zinc-400">
+                <p className="text-sm">No tasks in progress</p>
+                <p className="text-xs text-zinc-500 mt-1">Active tasks currently being built appear here.</p>
+              </div>
             )}
           </div>
         </div>
@@ -266,9 +286,10 @@ export default function Tasks() {
                 </div>
               ))
             ) : (
-              <p className="text-zinc-400 text-center py-4">
-                No completed tasks
-              </p>
+              <div className="border border-dashed border-slate-700/60 rounded-xl p-6 text-center text-zinc-400">
+                <p className="text-sm">No completed tasks yet</p>
+                <p className="text-xs text-zinc-500 mt-1">Finished deliverables will show up here.</p>
+              </div>
             )}
           </div>
         </div>
