@@ -16,6 +16,7 @@ const profileRoute = require("./routes/profileRoute.js");
 const mentorRoute = require("./routes/mentorRoute.js");
 const hackathonRoute = require("./routes/hackathonRoute.js");
 const notificationRoute = require("./routes/notificationRoute.js");
+const chatRoute = require("./routes/chatRoute.js");
 
 const app = express();
 
@@ -51,11 +52,10 @@ app.use("/api/gemini", askGeminiRoute);
 app.use("/api/files", fileRoutes);
 app.use("/api/resources", resourceRoute);
 app.use("/api/profile", profileRoute);
-
 app.use("/api/mentors", mentorRoute);
 app.use("/api/hackathons", hackathonRoute);
 app.use("/api/notifications", notificationRoute);
-
-// ✅ Start server
+app.use("/api/chat", chatRoute);
 const PORT = process.env.PORT || 5000;
+// ✅ Start server
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
