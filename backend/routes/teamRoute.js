@@ -1,20 +1,28 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-// Make sure getMyTeam is imported here
-const { createTeam, joinTeam, getMyTeam, leaveTeam } = require('../controllers/teamController.js');
-const { protect } = require('../middleware/authMiddleware.js');
+const {
+  createTeam,
+  joinTeam,
+  getMyTeam,
+  updateTeamProfile,
+  updateMemberRole,
+  removeMember,
+  regenerateInviteCode,
+  leaveTeam,
+} = require("../controllers/teamController.js");
+const { protect } = require("../middleware/authMiddleware.js");
 
-// Route to create a team
-router.route('/').post(protect, createTeam);
+// Basic team lifecycle
+router.route("/").post(protect, createTeam);
+router.route("/join").post(protect, joinTeam);
+router.route("/myteam").get(protect, getMyTeam);
+router.route("/leave").post(protect, leaveTeam);
 
-// Route to join a team
-router.route('/join').post(protect, joinTeam);
-
-// Make sure this line exists
-router.route('/myteam').get(protect, getMyTeam);
-
-router.route('/leave').post(protect, leaveTeam); // 👈 new route
-
+// Role-based team management (Leader only)
+router.route("/profile").put(protect, updateTeamProfile);
+router.route("/members/:targetUserId/role").put(protect, updateMemberRole);
+router.route("/members/:targetUserId").delete(protect, removeMember);
+router.route("/invite-code").post(protect, regenerateInviteCode);
 
 module.exports = router;

@@ -1,23 +1,45 @@
-const mongoose = require('mongoose');
-const { nanoid } = require('nanoid');
+const mongoose = require("mongoose");
+const { nanoid } = require("nanoid");
 
-const teamSchema = new mongoose.Schema({
+const teamSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      default: "",
+      trim: true,
     },
     members: [
-        {
-            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-            role: { type: String, default: 'member' },
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: {
+          type: String,
+          enum: ["leader", "co-leader", "member"],
+          default: "member",
         },
+        responsibility: {
+          type: String,
+          default: "General Contributor",
+          trim: true,
+        },
+        joinedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
     ],
     inviteCode: {
-        type: String,
-        default: () => nanoid(8), // Generates a random 8-character code
-        unique: true,
+      type: String,
+      default: () => nanoid(8),
+      unique: true,
     },
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
-const Team = mongoose.model('Team', teamSchema);
+const Team = mongoose.model("Team", teamSchema);
 module.exports = Team;
