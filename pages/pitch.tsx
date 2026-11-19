@@ -112,13 +112,20 @@ export default function Pitch() {
           <button
             onClick={generatePitch}
             disabled={isGenerating}
-            className={`w-full mt-4 ${
+            className={`w-full mt-4 flex items-center justify-center gap-2 ${
               isGenerating
-                ? "btn-secondary opacity-50 cursor-not-allowed"
+                ? "btn-secondary opacity-60 cursor-not-allowed"
                 : "btn-primary"
             }`}
           >
-            {isGenerating ? "Generating..." : "Generate Pitch"}
+            {isGenerating ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Generating Pitch...
+              </>
+            ) : (
+              "Generate Pitch"
+            )}
           </button>
         </div>
 
@@ -142,15 +149,20 @@ export default function Pitch() {
               <button
                 onClick={getPitchImprovements}
                 disabled={isGeneratingImprovements}
-                className={`w-full mt-2 ${
+                className={`w-full mt-2 flex items-center justify-center gap-2 ${
                   isGeneratingImprovements
-                    ? "btn-secondary opacity-50 cursor-not-allowed"
+                    ? "btn-secondary opacity-60 cursor-not-allowed"
                     : "btn-secondary"
                 } text-sm`}
               >
-                {isGeneratingImprovements
-                  ? "Analyzing..."
-                  : "✨ Suggest Improvements"}
+                {isGeneratingImprovements ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
+                    Analyzing Suggestions...
+                  </>
+                ) : (
+                  "✨ Suggest Improvements"
+                )}
               </button>
             </div>
           )}
