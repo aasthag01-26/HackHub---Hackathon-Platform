@@ -277,3 +277,10 @@ Thanks to everyone who contributes to making HackHub better!
 ## License
 
 This project is for educational and development purposes.
+
+### Student Hackathon Participation and Team Registration (`/register-hackathon`)
+- Register individually or create/manage teams for hackathons.
+- Generate and share team invitation keys with peers.
+- Accept or decline pending team collaboration requests.
+- Submit project deliverables including GitHub repositories, live demo links, and video walkthroughs.
+- Track participation status (Registered, Accepted, Under Review, Submitted) in real time.
