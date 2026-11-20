@@ -82,6 +82,7 @@ const Layout = ({ children }: LayoutProps) => {
     { name: "Hackathons", href: "/hackathons", icon: Compass },
     { name: "AI Pitch Copilot", href: "/pitch", icon: Sparkles },
     { name: "Profile", href: "/profile", icon: User },
+    { name: "Showcase", href: "/showcase", icon: Rocket },
   ];
   const isNotificationsActive = router.pathname === "/notifications";
   const unreadBadge = unreadNotificationCount > 99 ? "99+" : unreadNotificationCount;
