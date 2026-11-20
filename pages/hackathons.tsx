@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import Layout from "../components/Layout";
 import { useAppContext } from "../context/AppContext";
 import {
@@ -530,19 +531,28 @@ export default function Hackathons() {
                         </span>
                       )}
 
-                      <button
-                        onClick={() => handleOpenRegisterModal(hackathon)}
-                        className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                          hackathon.isRegistered
-                            ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                            : isExpired
-                            ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                            : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-md shadow-cyan-600/20"
-                        }`}
-                      >
-                        {hackathon.isRegistered ? "View Details" : "Register Team"}
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/leaderboard?event=${encodeURIComponent(hackathon.title)}`}
+                          className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition flex items-center justify-center"
+                          title="View Event Leaderboard"
+                        >
+                          <Trophy className="w-3.5 h-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => handleOpenRegisterModal(hackathon)}
+                          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                            hackathon.isRegistered
+                              ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                              : isExpired
+                              ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                              : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-md shadow-cyan-600/20"
+                          }`}
+                        >
+                          {hackathon.isRegistered ? "View Details" : "Register Team"}
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -614,6 +624,25 @@ export default function Hackathons() {
                   </div>
                 </div>
               )}
+
+              {/* Event Leaderboard Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-orange-500/10 border border-amber-500/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Event Leaderboard & Live Rankings</h4>
+                    <p className="text-[11px] text-gray-400">View real-time judging evaluations, criteria breakdowns, and rankings for this hackathon.</p>
+                  </div>
+                </div>
+                <Link
+                  href={`/leaderboard?event=${encodeURIComponent(selectedHackathon.title)}`}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition shrink-0 shadow-lg shadow-amber-500/20"
+                >
+                  View Rankings <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
 
               {/* Registration Form */}
               {!selectedHackathon.isRegistered ? (

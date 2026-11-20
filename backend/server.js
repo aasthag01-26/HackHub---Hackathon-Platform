@@ -13,6 +13,7 @@ const fileRoutes = require("./routes/fileRoute.js");
 const resourceRoute = require("./routes/resourceRoute.js");
 const profileRoute = require("./routes/profileRoute.js");
 const projectRoute = require("./routes/projectRoute.js");
+const leaderboardRoute = require("./routes/leaderboardRoute.js");
 
 const mentorRoute = require("./routes/mentorRoute.js");
 const hackathonRoute = require("./routes/hackathonRoute.js");
@@ -54,6 +55,7 @@ app.use("/api/files", fileRoutes);
 app.use("/api/resources", resourceRoute);
 app.use("/api/profile", profileRoute);
 app.use("/api/projects", projectRoute);
+app.use("/api/leaderboard", leaderboardRoute);
 
 app.use("/api/mentors", mentorRoute);
 app.use("/api/hackathons", hackathonRoute);
