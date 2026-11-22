@@ -24,27 +24,6 @@ interface ProjectSubmission {
   submittedAt: string;
 }
 
-const DEMO_TEAM_MEMBERS = [
-  {
-    id: "demo-1",
-    name: "Aastha Goyal",
-    role: "Full-Stack & AI Lead",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aastha",
-  },
-  {
-    id: "demo-2",
-    name: "Ananya Sharma",
-    role: "Frontend & UI Engineer",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ananya",
-  },
-  {
-    id: "demo-3",
-    name: "Riya Verma",
-    role: "Backend & APIs",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Riya",
-  },
-];
-
 export default function Dashboard() {
   const router = useRouter();
   const {
@@ -232,16 +211,14 @@ export default function Dashboard() {
     return Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
   };
 
-  const displayTeamName = teamName && teamName.trim() ? teamName.trim() : "HackHub Squad";
+  const displayTeamName =
+    teamName && teamName.trim() ? teamName.trim() : "HackHub Squad";
   const displayTeamBio =
     teamBio && teamBio.trim()
       ? teamBio.trim()
       : "Building collaborative hackathon solutions with speed and precision.";
   const teamInitial = displayTeamName.charAt(0).toUpperCase();
-  const displayMembers =
-    Array.isArray(teamMembers) && teamMembers.length > 0
-      ? teamMembers
-      : DEMO_TEAM_MEMBERS;
+  const displayMembers = Array.isArray(teamMembers) ? teamMembers : [];
 
   if (isLoading) {
     return (
@@ -329,7 +306,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Clean Project Progress Card (replaces flat green rectangle) */}
+        {/* Clean Project Progress Card */}
         <div className="card lg:col-span-2 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-start gap-3 mb-4">
@@ -360,7 +337,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Linear Progress Bar + Breakdown */}
             <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
               <div className="flex justify-between text-xs text-zinc-300 font-medium">
                 <span>Sprint Completion</span>
@@ -603,43 +579,51 @@ export default function Dashboard() {
             Manage Team →
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {displayMembers.map((member) => {
-            const roleLabel = member.role?.trim() || "Member";
-            const isLeader = roleLabel.toLowerCase() === "leader";
+        {displayMembers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {displayMembers.map((member) => {
+              const roleLabel = member.role?.trim() || "Member";
+              const isLeader = roleLabel.toLowerCase() === "leader";
 
-            return (
-            <div
-              key={member.id}
-              className="rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-3 p-3.5"
-            >
-              <div className="flex items-center min-w-0">
-              <img
-                src={member.avatar}
-                alt={member.name}
-                className="w-10 h-10 rounded-full mr-3 border border-slate-700 shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="font-medium text-white text-sm truncate">
-                  {member.name}
-                </p>
-                <p className="text-xs text-zinc-400 truncate">{isLeader ? "Team Leader" : roleLabel}</p>
-              </div>
-            </div>
-            <span
-                  className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-semibold shrink-0 ${
-                    isLeader
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                      : "bg-slate-800 text-cyan-300 border border-slate-700"
-                  }`}
+              return (
+                <div
+                  key={member.id}
+                  className="rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-3 p-3.5"
                 >
-                  {isLeader && <Crown className="w-3 h-3 text-amber-300" />}
-                  {roleLabel}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+                  <div className="flex items-center min-w-0">
+                    <img
+                      src={member.avatar}
+                      alt={member.name}
+                      className="w-10 h-10 rounded-full mr-3 border border-slate-700 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-medium text-white text-sm truncate">
+                        {member.name}
+                      </p>
+                      <p className="text-xs text-zinc-400 truncate">
+                        {isLeader ? "Team Leader" : roleLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-semibold shrink-0 ${
+                      isLeader
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        : "bg-slate-800 text-cyan-300 border border-slate-700"
+                    }`}
+                  >
+                    {isLeader && <Crown className="w-3 h-3 text-amber-300" />}
+                    {roleLabel}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-zinc-400 text-center py-4 text-sm">
+            No team members yet.
+          </p>
+        )}
       </div>
 
       {/* Project Submission Verification Modal */}

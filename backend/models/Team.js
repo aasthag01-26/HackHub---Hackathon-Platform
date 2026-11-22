@@ -12,6 +12,14 @@ const teamSchema = new mongoose.Schema({
             role: { type: String, default: 'member' },
         },
     ],
+    pendingInvites: [
+        {
+            email: { type: String, required: true, lowercase: true, trim: true },
+            role: { type: String, default: 'member' },
+            status: { type: String, enum: ['Pending'], default: 'Pending' },
+            invitedAt: { type: Date, default: Date.now },
+        },
+    ],
     inviteCode: {
         type: String,
         default: () => nanoid(8), // Generates a random 8-character code

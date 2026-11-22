@@ -11,6 +11,8 @@ import {
   Edit2,
   RefreshCw,
   Crown,
+  Mail,
+  Send,
 } from "lucide-react";
 
 interface DisplayMember {
@@ -33,12 +35,20 @@ interface BackendTeamMember {
   _id?: string;
 }
 
+interface PendingInviteItem {
+  _id?: string;
+  email: string;
+  role?: string;
+  status?: string;
+}
+
 interface BackendTeam {
   _id: string;
   name: string;
   bio?: string;
   inviteCode: string;
   members: BackendTeamMember[];
+  pendingInvites?: PendingInviteItem[];
 }
 
 export default function Team() {
@@ -56,6 +66,13 @@ export default function Team() {
   );
   const [inviteCode, setInviteCode] = useState("");
   const [members, setMembers] = useState<DisplayMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInviteItem[]>([]);
+
+  // Invite by email state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [generatedJoinLink, setGeneratedJoinLink] = useState("");
+  const [copiedJoinLink, setCopiedJoinLink] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -109,6 +126,11 @@ export default function Team() {
             updateContextTeamBio(data.team.bio);
           }
           setInviteCode(data.team.inviteCode);
+          setPendingInvites(
+            Array.isArray(data.team.pendingInvites)
+              ? data.team.pendingInvites
+              : []
+          );
 
           if (Array.isArray(data.team.members)) {
             const mapped: DisplayMember[] = data.team.members.map((m, idx) => {
@@ -157,6 +179,54 @@ export default function Team() {
       setTimeout(() => setCopiedCode(false), 3000);
     } catch {
       showToast("error", "Unable to copy code to clipboard");
+    }
+  };
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = inviteEmail.trim();
+    if (!cleanEmail) {
+      showToast("error", "Please enter a teammate email address");
+      return;
+    }
+
+    setIsSendingInvite(true);
+    try {
+      const res = await fetch(`${API_BASE}/teams/invite`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (data.joinLink) {
+          setGeneratedJoinLink(data.joinLink);
+          setCopiedJoinLink(false);
+        }
+        showToast("success", data.message || `Invite sent to ${cleanEmail}`);
+        setInviteEmail("");
+        await fetchMyTeam();
+      } else {
+        showToast("error", data.message || "Failed to send invite");
+      }
+    } catch (err) {
+      console.error("Invite error:", err);
+      showToast("error", "Network error while sending invite");
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  const copyJoinLink = async () => {
+    if (!generatedJoinLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedJoinLink);
+      setCopiedJoinLink(true);
+      showToast("success", "Join link copied to clipboard!");
+      setTimeout(() => setCopiedJoinLink(false), 3000);
+    } catch {
+      showToast("error", "Unable to copy join link");
     }
   };
 
@@ -234,8 +304,8 @@ export default function Team() {
             Team Workspace &amp; Settings
           </h2>
           <p className="text-body-sm font-body text-zinc-400 max-w-3xl">
-            Manage your team&apos;s identity, share the unique join code, and view
-            all active team members.
+            Manage your team&apos;s identity, invite teammates via Gmail, and
+            view all active team members.
           </p>
         </div>
         <button
@@ -269,6 +339,75 @@ export default function Team() {
         </div>
       )}
 
+      {/* Invite Teammate via Gmail Card */}
+      <div className="card mb-6 border border-cyan-500/25">
+        <h3 className="text-heading-lg font-heading text-white mb-1 flex items-center gap-2">
+          <Mail className="w-4 h-4 text-cyan-400" />
+          Invite Teammate via Gmail
+        </h3>
+        <p className="text-xs text-zinc-400 mb-4">
+          Send an invite link &amp; code to their Gmail so they can create an
+          account and join this team automatically.
+        </p>
+
+        <form
+          onSubmit={handleSendInvite}
+          className="flex flex-col sm:flex-row gap-2.5"
+        >
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            placeholder="teammate@gmail.com"
+            className="input-enhanced flex-1 text-white placeholder-zinc-500"
+            required
+          />
+          <button
+            type="submit"
+            disabled={isSendingInvite}
+            className="btn-primary text-sm px-4 py-2.5 flex items-center justify-center gap-2 shrink-0"
+          >
+            <Send className="w-4 h-4" />
+            <span>{isSendingInvite ? "Sending..." : "Send Invite"}</span>
+          </button>
+        </form>
+
+        {generatedJoinLink && (
+          <div className="mt-4 p-3 rounded-xl bg-slate-900/80 border border-slate-700/80">
+            <p className="text-xs text-zinc-400 mb-1.5">
+              Invite Join Link (open in an incognito tab to test signup &amp;
+              auto-join):
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={generatedJoinLink}
+                className="input-enhanced flex-1 text-xs font-mono text-cyan-300 bg-zinc-950"
+              />
+              <button
+                type="button"
+                onClick={copyJoinLink}
+                className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5 shrink-0"
+              >
+                {copiedJoinLink ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Team Profile Card */}
       <div className="card mb-6 border border-purple-500/20">
         <h3 className="text-heading-lg font-heading text-white mb-4">
           Team Profile
@@ -347,6 +486,7 @@ export default function Team() {
         </div>
       </div>
 
+      {/* Members Card */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
@@ -424,6 +564,45 @@ export default function Team() {
               Share your team invite code to collaborate with teammates.
             </p>
           </div>
+        )}
+      </div>
+
+      {/* Pending Invites Card */}
+      <div className="card mt-6 border border-amber-500/20">
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-heading-lg font-heading text-white">
+            Pending Invites
+          </h3>
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300">
+            {pendingInvites.length}
+          </span>
+        </div>
+
+        {pendingInvites.length > 0 ? (
+          <div className="space-y-2.5">
+            {pendingInvites.map((inv, idx) => (
+              <div
+                key={inv._id || `${inv.email}-${idx}`}
+                className="glass rounded-xl flex justify-between items-center p-3"
+              >
+                <div className="min-w-0 pr-3">
+                  <p className="text-sm font-medium text-white truncate">
+                    {inv.email}
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    Role: {inv.role || "Member"}
+                  </p>
+                </div>
+                <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                  Pending
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-400">
+            No pending invites right now.
+          </p>
         )}
       </div>
 

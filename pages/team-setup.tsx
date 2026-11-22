@@ -4,13 +4,18 @@ import Head from "next/head";
 import { useAppContext } from "../context/AppContext";
 import { Users, Copy, CheckCircle2, AlertCircle, Plus, Trash2 } from "lucide-react";
 
+interface SetupMemberRow {
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function TeamSetup() {
   const router = useRouter();
   const {
     setTeamName: updateTeamName,
     setTeamBio: updateTeamBio,
     setDeadline: updateDeadline,
-    addTeamMember,
   } = useAppContext();
 
   const [teamName, setTeamName] = useState("");
@@ -18,7 +23,9 @@ export default function TeamSetup() {
     "Our team is participating in a hackathon!"
   );
   const [deadline, setDeadline] = useState("");
-  const [members, setMembers] = useState([{ name: "", role: "Frontend" }]);
+  const [members, setMembers] = useState<SetupMemberRow[]>([
+    { name: "", email: "", role: "Frontend" },
+  ]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -26,7 +33,10 @@ export default function TeamSetup() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const rawApi = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const API_URL = rawApi.endsWith("/api")
+    ? rawApi
+    : `${rawApi.replace(/\/+$/, "")}/api`;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -41,7 +51,7 @@ export default function TeamSetup() {
   }, [router]);
 
   const addMemberInput = () => {
-    setMembers([...members, { name: "", role: "Frontend" }]);
+    setMembers([...members, { name: "", email: "", role: "Frontend" }]);
   };
 
   const removeMemberInput = (index: number) => {
@@ -51,7 +61,7 @@ export default function TeamSetup() {
 
   const updateMember = (
     index: number,
-    field: "name" | "role",
+    field: "name" | "email" | "role",
     value: string
   ) => {
     const updatedMembers = [...members];
@@ -59,7 +69,6 @@ export default function TeamSetup() {
     setMembers(updatedMembers);
   };
 
-  // Handle form submission
   const handleCopyCode = async () => {
     if (!inviteCode) return;
     try {
@@ -70,6 +79,9 @@ export default function TeamSetup() {
       // fallback
     }
   };
+
+  const isValidEmail = (val: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,46 +100,74 @@ export default function TeamSetup() {
       }
     }
 
+    // If Member Name is entered, Gmail is mandatory
+    for (let i = 0; i < members.length; i++) {
+      const mName = members[i].name.trim();
+      const mEmail = members[i].email.trim();
+      if (mName && !mEmail) {
+        setErrorMessage(
+          `Gmail is required for Member ${i + 1} (${mName}) when name is entered.`
+        );
+        return;
+      }
+      if (mEmail && !isValidEmail(mEmail)) {
+        setErrorMessage(`Please enter a valid Gmail address for Member ${i + 1}.`);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      let generatedInvite = `HACK-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      let generatedInvite = `HACK-${Math.random()
+        .toString(36)
+        .substring(2, 6)
+        .toUpperCase()}`;
 
-      // Persist team in MongoDB backend
       if (token) {
-        try {
-          const res = await fetch(`${API_URL}/teams`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ name: teamName.trim() }),
-          });
+        const res = await fetch(`${API_URL}/teams`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name: teamName.trim() }),
+        });
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data.team?.inviteCode) {
-              generatedInvite = data.team.inviteCode;
-            }
-            if (data.team?._id) {
-              const userRaw = localStorage.getItem("user");
-              if (userRaw) {
-                const user = JSON.parse(userRaw);
-                user.teamId = data.team._id;
-                user.role = "leader";
-                localStorage.setItem("user", JSON.stringify(user));
-              }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.team?.inviteCode) {
+            generatedInvite = data.team.inviteCode;
+          }
+          if (data.team?._id) {
+            const userRaw = localStorage.getItem("user");
+            if (userRaw) {
+              const user = JSON.parse(userRaw);
+              user.teamId = data.team._id;
+              user.role = "leader";
+              localStorage.setItem("user", JSON.stringify(user));
             }
           }
-        } catch (apiErr) {
-          console.warn("Backend team creation unavailable, using local state:", apiErr);
+        }
+
+        // Send pending invites for rows where email is provided
+        for (const member of members) {
+          const cleanEmail = member.email.trim().toLowerCase();
+          if (cleanEmail) {
+            await fetch(`${API_URL}/teams/invite`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ email: cleanEmail }),
+            }).catch(() => {});
+          }
         }
       }
 
-      // Update Context
       updateTeamName(teamName.trim());
       updateTeamBio(teamBio.trim());
 
@@ -135,21 +175,6 @@ export default function TeamSetup() {
         updateDeadline(new Date(deadline));
       }
 
-      members.forEach((member) => {
-        
-        if (member.name.trim()) {
-          const firstLetter = member.name.trim().charAt(0).toUpperCase();
-          const avatar = `https://placehold.co/40x40/38bdf8/ffffff?text=${firstLetter}`;
-
-          addTeamMember({
-            name: member.name.trim(),
-            role: member.role || "Frontend",
-            avatar,
-          });
-        }
-      });
-
-      
       setInviteCode(generatedInvite);
       setSuccess(true);
     } catch (error) {
@@ -235,7 +260,9 @@ export default function TeamSetup() {
 
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <label className="label-enhanced">Teammates (optional)</label>
+                  <label className="label-enhanced">
+                    Teammates (optional — Gmail required if name is added)
+                  </label>
                   <button
                     type="button"
                     onClick={addMemberInput}
@@ -246,42 +273,70 @@ export default function TeamSetup() {
                   </button>
                 </div>
 
-                {members.map((member, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <input
-                      type="text"
-                      value={member.name}
-                      onChange={(e) =>
-                        updateMember(index, "name", e.target.value)
-                      }
-                      placeholder={`Member ${index + 1} Name`}
-                      className="input-enhanced flex-1 text-white placeholder-zinc-500"
-                    />
-                    <select
-                      value={member.role}
-                      onChange={(e) =>
-                        updateMember(index, "role", e.target.value)
-                      }
-                      className="input-enhanced w-36 bg-zinc-900 text-white"
+                {members.map((member, index) => {
+                  const nameEntered = Boolean(member.name.trim());
+                  return (
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center"
                     >
-                      <option value="Frontend" className="bg-zinc-900 text-white">Frontend</option>
-                      <option value="Backend" className="bg-zinc-900 text-white">Backend</option>
-                      <option value="AI/ML" className="bg-zinc-900 text-white">AI/ML</option>
-                      <option value="Designer" className="bg-zinc-900 text-white">Designer</option>
-                      <option value="Full Stack" className="bg-zinc-900 text-white">Full Stack</option>
-                    </select>
-                    {members.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeMemberInput(index)}
-                        className="p-2 text-zinc-500 hover:text-rose-400"
-                        title="Remove member"
+                      <input
+                        type="text"
+                        value={member.name}
+                        onChange={(e) =>
+                          updateMember(index, "name", e.target.value)
+                        }
+                        placeholder={`Member ${index + 1} Name`}
+                        className="input-enhanced flex-1 text-white placeholder-zinc-500"
+                      />
+                      <input
+                        type="email"
+                        value={member.email}
+                        onChange={(e) =>
+                          updateMember(index, "email", e.target.value)
+                        }
+                        placeholder={
+                          nameEntered ? "Gmail * (required)" : "Gmail (optional)"
+                        }
+                        required={nameEntered}
+                        className="input-enhanced flex-1 text-white placeholder-zinc-500"
+                      />
+                      <select
+                        value={member.role}
+                        onChange={(e) =>
+                          updateMember(index, "role", e.target.value)
+                        }
+                        className="input-enhanced sm:w-36 bg-zinc-900 text-white"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                        <option value="Frontend" className="bg-zinc-900 text-white">
+                          Frontend
+                        </option>
+                        <option value="Backend" className="bg-zinc-900 text-white">
+                          Backend
+                        </option>
+                        <option value="AI/ML" className="bg-zinc-900 text-white">
+                          AI/ML
+                        </option>
+                        <option value="Designer" className="bg-zinc-900 text-white">
+                          Designer
+                        </option>
+                        <option value="Full Stack" className="bg-zinc-900 text-white">
+                          Full Stack
+                        </option>
+                      </select>
+                      {members.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMemberInput(index)}
+                          className="p-2 text-zinc-500 hover:text-rose-400 self-end sm:self-center"
+                          title="Remove member"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <button
@@ -292,12 +347,12 @@ export default function TeamSetup() {
                 {loading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Creating Team & Generating Code...</span>
+                    <span>Creating Team &amp; Generating Code...</span>
                   </>
                 ) : (
                   <>
                     <Users className="w-4 h-4" />
-                    <span>Create Team & Generate Invite Code</span>
+                    <span>Create Team &amp; Generate Invite Code</span>
                   </>
                 )}
               </button>
@@ -339,7 +394,10 @@ export default function TeamSetup() {
               </button>
             </div>
 
-            <button onClick={enterDashboard} className="w-full max-w-sm mx-auto btn-primary py-3">
+            <button
+              onClick={enterDashboard}
+              className="w-full max-w-sm mx-auto btn-primary py-3"
+            >
               Enter Team Dashboard →
             </button>
           </div>
