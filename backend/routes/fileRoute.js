@@ -96,29 +96,23 @@ router.get("/files", protect, async (req, res) => {
   }
 });
 
-// Download only files belonging to current team
-router.get("/file/:filename", protect, async (req, res) => {
+// Stream/view uploaded file (PDF / docs / etc.) directly from browser link
+router.get("/file/:filename", async (req, res) => {
   try {
-    const teamId = getTeamId(req, res);
-    if (!teamId) return;
-
     const bucket = new GridFSBucket(mongoose.connection.db, {
       bucketName: "uploads",
     });
 
-    const file = await bucket.find({
-      filename: req.params.filename,
-      "metadata.teamId": teamId,
-    }).next();
+    const file = await bucket
+      .find({ filename: req.params.filename })
+      .next();
 
     if (!file) {
       return res.status(404).json({ message: "File not found!" });
     }
 
-    res.set(
-      "Content-Type",
-      file.contentType || "application/octet-stream"
-    );
+    res.set("Content-Type", file.contentType || "application/octet-stream");
+    res.set("Content-Disposition", `inline; filename="${encodeURIComponent(file.filename)}"`);
 
     bucket.openDownloadStream(file._id).pipe(res);
   } catch (err) {
@@ -139,10 +133,12 @@ router.delete("/file/:identifier", protect, async (req, res) => {
       bucketName: "uploads",
     });
 
-    const file = await bucket.find({
-      filename: req.params.identifier,
-      "metadata.teamId": teamId,
-    }).next();
+    const file = await bucket
+      .find({
+        filename: req.params.identifier,
+        "metadata.teamId": teamId,
+      })
+      .next();
 
     if (!file) {
       return res.status(404).json({

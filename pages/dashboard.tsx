@@ -1,33 +1,17 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Head from "next/head";
-import Script from "next/script";
 import { useAppContext } from "../context/AppContext";
 import { useRouter } from "next/router";
-import { CheckCircle2, Rocket, ExternalLink, AlertCircle, Award } from "lucide-react";
-
-// Strongly typed Chart.js window declaration
-interface ChartInstance {
-  destroy: () => void;
-}
-
-interface ChartTooltipItem {
-  label?: string;
-  parsed: number | null;
-}
-
-interface ChartConstructor {
-  new (
-    ctx: CanvasRenderingContext2D,
-    config: Record<string, unknown>
-  ): ChartInstance;
-  getChart: (canvas: HTMLCanvasElement) => ChartInstance | undefined;
-}
-
-declare global {
-  interface Window {
-    Chart?: ChartConstructor;
-  }
-}
+import {
+  CheckCircle2,
+  Rocket,
+  ExternalLink,
+  AlertCircle,
+  Award,
+  RefreshCw,
+  Users,
+  Clock,
+} from "lucide-react";
 
 interface ProjectSubmission {
   title: string;
@@ -39,6 +23,27 @@ interface ProjectSubmission {
   submittedAt: string;
 }
 
+const DEMO_TEAM_MEMBERS = [
+  {
+    id: "demo-1",
+    name: "Aastha Goyal",
+    role: "Full-Stack & AI Lead",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aastha",
+  },
+  {
+    id: "demo-2",
+    name: "Ananya Sharma",
+    role: "Frontend & UI Engineer",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ananya",
+  },
+  {
+    id: "demo-3",
+    name: "Riya Verma",
+    role: "Backend & APIs",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Riya",
+  },
+];
+
 export default function Dashboard() {
   const router = useRouter();
   const {
@@ -47,17 +52,11 @@ export default function Dashboard() {
     teamBio,
     teamMembers,
     isAuthenticated,
-    deadline,
     hackathonEndTime,
   } = useAppContext();
 
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [_timeRemaining, setTimeRemaining] = useState<string | null>(null);
-  const [chartError, setChartError] = useState<string | null>(null);
-  const [chartJsLoaded, setChartJsLoaded] = useState(false);
-  const [chartLoading, setChartLoading] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [hackathonTimeRemaining, setHackathonTimeRemaining] = useState<{
     days: number;
     hours: number;
@@ -83,14 +82,15 @@ export default function Dashboard() {
   const [checklistReadme, setChecklistReadme] = useState(false);
   const [checklistDemo, setChecklistDemo] = useState(false);
 
-  // Calculate task statistics
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+
   const taskStats = useMemo(() => {
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter((t) => t.status === "Done").length;
-    const inProgressTasks = tasks.filter(
+    const totalTasks = safeTasks.length;
+    const completedTasks = safeTasks.filter((t) => t.status === "Done").length;
+    const inProgressTasks = safeTasks.filter(
       (t) => t.status === "In Progress"
     ).length;
-    const todoTasks = tasks.filter((t) => t.status === "To Do").length;
+    const todoTasks = safeTasks.filter((t) => t.status === "To Do").length;
     const completionPercentage =
       totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -100,11 +100,9 @@ export default function Dashboard() {
       inProgressTasks,
       todoTasks,
       completionPercentage,
-      chartData: [completedTasks, inProgressTasks, todoTasks],
     };
-  }, [tasks]);
+  }, [safeTasks, refreshTick]);
 
-  // Load existing project submission
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("hackhub_submission");
@@ -122,10 +120,12 @@ export default function Dashboard() {
           setChecklistReadme(true);
           setChecklistDemo(true);
         } catch {
-          // ignore
+          // ignore invalid saved json
         }
       }
     }
+    const timer = setTimeout(() => setIsLoading(false), 150);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleProjectSubmission = (e: React.FormEvent) => {
@@ -175,145 +175,30 @@ export default function Dashboard() {
       setSubmission(payload);
       setSubmittingProject(false);
       setSubmissionSuccess(true);
-    }, 400);
+    }, 350);
   };
 
-  // Simplified chart initialization function
-  const initializeChart = useCallback(() => {
-    if (!chartRef.current || !window.Chart) {
+  useEffect(() => {
+    if (!hackathonEndTime) {
+      setHackathonTimeRemaining(null);
       return;
     }
 
-    try {
-      setChartLoading(true);
-      setChartError(null);
+    const endMs =
+      hackathonEndTime instanceof Date
+        ? hackathonEndTime.getTime()
+        : new Date(hackathonEndTime).getTime();
 
-      const ctx = chartRef.current.getContext("2d");
-      if (!ctx) {
-        setChartError("Could not get canvas context");
-        setChartLoading(false);
-        return;
-      }
-
-      const existingChart = window.Chart.getChart(chartRef.current);
-      if (existingChart) {
-        existingChart.destroy();
-      }
-
-      new window.Chart(ctx, {
-        type: "doughnut",
-        data: {
-          labels: ["Done", "In Progress", "To Do"],
-          datasets: [
-            {
-              data: taskStats.chartData,
-              backgroundColor: [
-                "#10b981", // emerald-500
-                "#f59e0b", // amber-500
-                "#f43f5e", // rose-500
-              ],
-              borderColor: "#18181b", // zinc-900
-              borderWidth: 4,
-              hoverOffset: 8,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: "70%",
-          animation: {
-            duration: 500,
-          },
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: {
-                color: "#f8fafc",
-                font: { size: 14, weight: 600 },
-              },
-            },
-            tooltip: {
-              callbacks: {
-                label: function (context: ChartTooltipItem) {
-                  let label = context.label || "";
-                  if (label) label += ": ";
-                  if (context.parsed !== null && context.parsed !== undefined)
-                    label += context.parsed + " tasks";
-                  return label;
-                },
-              },
-            },
-          },
-        },
-      });
-
-      setChartError(null);
-      setChartLoading(false);
-    } catch (error) {
-      setChartError(
-        `Error creating chart: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      setChartLoading(false);
-    }
-  }, [taskStats]);
-
-  useEffect(() => {
-    setIsClient(true);
-    if (typeof window !== "undefined" && window.Chart) {
-      setChartJsLoaded(true);
-    }
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Calculate time remaining until deadline
-  useEffect(() => {
-    if (!deadline) {
-      setTimeRemaining("Deadline not set");
+    if (Number.isNaN(endMs)) {
+      setHackathonTimeRemaining(null);
       return;
     }
-
-    const calculateTimeRemaining = () => {
-      const now = new Date().getTime();
-      const distance = deadline.getTime() - now;
-
-      if (distance < 0) {
-        setTimeRemaining("Expired");
-        return;
-      }
-
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor(
-        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-      );
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-
-      return `${days} days, ${hours} hours, ${minutes} minutes remaining`;
-    };
-
-    setTimeRemaining(calculateTimeRemaining() || null);
-
-    const timer = setInterval(() => {
-      setTimeRemaining(calculateTimeRemaining() || null);
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, [deadline]);
-
-  // Hackathon countdown timer
-  useEffect(() => {
-    if (!hackathonEndTime) return;
 
     const calculateHackathonTime = () => {
-      const now = new Date().getTime();
-      const distance = hackathonEndTime.getTime() - now;
+      const now = Date.now();
+      const distance = endMs - now;
 
-      if (distance < 0) {
+      if (distance <= 0) {
         setHackathonTimeRemaining(null);
         return;
       }
@@ -334,7 +219,7 @@ export default function Dashboard() {
   }, [hackathonEndTime]);
 
   const getHackathonProgress = () => {
-    if (!hackathonEndTime || !hackathonTimeRemaining) return 100;
+    if (!hackathonTimeRemaining) return 100;
     const totalDuration = 48 * 60 * 60 * 1000;
     const remainingTime =
       hackathonTimeRemaining.days * 24 * 60 * 60 * 1000 +
@@ -346,37 +231,21 @@ export default function Dashboard() {
     return Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
   };
 
-  useEffect(() => {
-    if (!isClient || !chartJsLoaded || !window.Chart || !chartRef.current) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      initializeChart();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [isClient, chartJsLoaded, initializeChart, taskStats.totalTasks]);
-
-  useEffect(() => {
-    return () => {
-      try {
-        if (chartRef.current && window.Chart) {
-          const existingChart = window.Chart.getChart(chartRef.current);
-          if (existingChart) {
-            existingChart.destroy();
-          }
-        }
-      } catch (e) {
-        console.error("Error cleaning up chart:", e);
-      }
-    };
-  }, []);
-
-  const teamInitial = teamName ? teamName.charAt(0) : "T";
+  const displayTeamName = teamName && teamName.trim() ? teamName.trim() : "HackHub Squad";
+  const displayTeamBio =
+    teamBio && teamBio.trim()
+      ? teamBio.trim()
+      : "Building collaborative hackathon solutions with speed and precision.";
+  const teamInitial = displayTeamName.charAt(0).toUpperCase();
+  const displayMembers =
+    Array.isArray(teamMembers) && teamMembers.length > 0
+      ? teamMembers
+      : DEMO_TEAM_MEMBERS;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen dark-theme-background flex items-center justify-center">
-        <div className="loader"></div>
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400 border-t-transparent" />
       </div>
     );
   }
@@ -390,41 +259,24 @@ export default function Dashboard() {
       <Head>
         <title>HackHub - Dashboard</title>
       </Head>
-      <Script
-        src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          setChartJsLoaded(true);
-          setTimeout(() => {
-            if (chartRef.current && window.Chart) {
-              initializeChart();
-            }
-          }, 100);
-        }}
-        onError={(e) => {
-          console.error("Failed to load Chart.js", e);
-          setChartError("Failed to load Chart.js");
-        }}
-      />
 
-      {/* Verified Submission Banner */}
       {submission && (
         <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/30 text-emerald-300 flex items-center justify-center font-bold text-xl border border-emerald-500/40">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/30 text-emerald-300 flex items-center justify-center border border-emerald-500/40">
               <Award className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-semibold text-white text-base">
-                  Project Submitted & Verified!
+                  Project Submitted &amp; Verified!
                 </h4>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/30 text-emerald-300 border border-emerald-500/50">
                   Ready for Evaluation
                 </span>
               </div>
               <p className="text-xs text-emerald-200/80 mt-0.5">
-                "{submission.title}" — submitted on{" "}
+                &quot;{submission.title}&quot; — submitted on{" "}
                 {new Date(submission.submittedAt).toLocaleString()}
               </p>
             </div>
@@ -440,6 +292,7 @@ export default function Dashboard() {
               <span>Live Demo</span>
             </a>
             <button
+              type="button"
               onClick={() => {
                 setSubmissionSuccess(false);
                 setShowSubmissionModal(true);
@@ -454,114 +307,121 @@ export default function Dashboard() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-display-md font-display text-gradient-primary mb-1 text-glow">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">
             Team Dashboard
           </h2>
-          <p className="text-body-sm font-body text-zinc-400">
-            Real-time project overview, Kanban statistics, and hackathon countdown.
+          <p className="text-sm text-zinc-300">
+            Real-time project overview, task statistics, and hackathon countdown.
           </p>
         </div>
         <button
+          type="button"
           onClick={() => {
             setSubmissionSuccess(false);
             setShowSubmissionModal(true);
           }}
-          className="btn-primary flex items-center gap-2 shadow-lg hover:shadow-cyan-500/20"
+          className="btn-primary flex items-center gap-2 shadow-lg"
         >
           <Rocket className="w-4 h-4" />
-          <span>{submission ? "Update Submission 🚀" : "Submit Project 🚀"}</span>
+          <span>{submission ? "Update Submission" : "Submit Project"}</span>
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Progress Chart */}
-        <div className="card lg:col-span-2">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-heading-lg font-heading">Project Progress</h3>
-            <button
-              onClick={() => {
-                setChartError(null);
-                setChartLoading(true);
-                if (chartRef.current && window.Chart) {
-                  const existingChart = window.Chart.getChart(chartRef.current);
-                  if (existingChart) existingChart.destroy();
-                }
-                setTimeout(initializeChart, 100);
-              }}
-              className="btn-primary text-xs px-3 py-1.5"
-              title="Refresh Chart"
-            >
-              🔄 Refresh
-            </button>
-          </div>
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <p className="text-body-sm font-body text-zinc-400">
-                Visualizes your team's task completion status.
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-display-sm font-display text-gradient-primary">
-                {taskStats.completionPercentage}%
-              </p>
-              <p className="text-caption text-zinc-400">Tasks Completed</p>
-            </div>
-          </div>
-
-          <div className="chart-enhanced relative h-64 p-4">
-            {chartError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/90 rounded-lg">
-                <div className="text-center p-4">
-                  <p className="text-rose-400 mb-2">{chartError}</p>
-                  <button
-                    onClick={() => {
-                      setChartError(null);
-                      setChartLoading(true);
-                      initializeChart();
-                    }}
-                    className="btn-primary text-xs px-3 py-1"
-                  >
-                    Retry
-                  </button>
-                </div>
+        {/* Clean Project Progress Card (replaces flat green rectangle) */}
+        <div className="card lg:col-span-2 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start gap-3 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">Project Progress</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Visualizes your team&apos;s task completion status across{" "}
+                  {taskStats.totalTasks} total tasks.
+                </p>
               </div>
-            )}
-            {(!chartJsLoaded || chartLoading) && !chartError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/50 rounded-lg">
-                <div className="text-center">
-                  <div className="loader mb-2"></div>
-                  <p className="text-zinc-400 text-sm">
-                    {!chartJsLoaded
-                      ? "Loading Chart.js..."
-                      : "Initializing chart..."}
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-2xl font-extrabold text-cyan-300">
+                    {taskStats.completionPercentage}%
+                  </p>
+                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider">
+                    Tasks Completed
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setRefreshTick((prev) => prev + 1)}
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-zinc-200 border border-slate-700 transition"
+                  title="Refresh Stats"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
-            )}
+            </div>
 
-            <canvas
-              ref={chartRef}
-              id="progressChart"
-              className="w-full h-full"
-            ></canvas>
+            {/* Linear Progress Bar + Breakdown */}
+            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+              <div className="flex justify-between text-xs text-zinc-300 font-medium">
+                <span>Sprint Completion</span>
+                <span>
+                  {taskStats.completedTasks} / {taskStats.totalTasks} Done
+                </span>
+              </div>
+              <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-500 transition-all duration-500"
+                  style={{ width: `${taskStats.completionPercentage}%` }}
+                />
+              </div>
+
+              <div className="space-y-2 pt-1 text-xs">
+                <div className="flex items-center justify-between text-zinc-300">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    Completed (Done)
+                  </span>
+                  <span className="font-semibold text-emerald-300">
+                    {taskStats.completedTasks} tasks
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-zinc-300">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                    Active (In Progress)
+                  </span>
+                  <span className="font-semibold text-amber-300">
+                    {taskStats.inProgressTasks} tasks
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-zinc-300">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                    Queued (To Do)
+                  </span>
+                  <span className="font-semibold text-rose-300">
+                    {taskStats.todoTasks} tasks
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mt-6">
-            <div className="text-center p-3 glass rounded-xl">
-              <p className="text-sm text-emerald-400 font-semibold">Done</p>
-              <p className="text-2xl font-bold text-emerald-300">
+          <div className="grid grid-cols-3 gap-3 mt-5">
+            <div className="text-center p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+              <p className="text-xs text-emerald-400 font-semibold">Done</p>
+              <p className="text-2xl font-bold text-emerald-300 mt-0.5">
                 {taskStats.completedTasks}
               </p>
             </div>
-            <div className="text-center p-3 glass rounded-xl">
-              <p className="text-sm text-amber-400 font-semibold">In Progress</p>
-              <p className="text-2xl font-bold text-amber-300">
+            <div className="text-center p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+              <p className="text-xs text-amber-400 font-semibold">In Progress</p>
+              <p className="text-2xl font-bold text-amber-300 mt-0.5">
                 {taskStats.inProgressTasks}
               </p>
             </div>
-            <div className="text-center p-3 glass rounded-xl">
-              <p className="text-sm text-rose-400 font-semibold">To Do</p>
-              <p className="text-2xl font-bold text-rose-300">
+            <div className="text-center p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+              <p className="text-xs text-rose-400 font-semibold">To Do</p>
+              <p className="text-2xl font-bold text-rose-300 mt-0.5">
                 {taskStats.todoTasks}
               </p>
             </div>
@@ -569,138 +429,114 @@ export default function Dashboard() {
         </div>
 
         {/* Team Intro */}
-        <div className="card">
-          <h3 className="text-heading-lg font-heading mb-4">{teamName}</h3>
-          <div
-            className="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-zinc-700
-                       flex items-center justify-center 
-                       bg-gradient-to-br from-zinc-800 to-zinc-900"
-          >
-            <span className="text-4xl font-display text-gradient-primary">
-              {teamInitial}
-            </span>
+        <div className="card flex flex-col justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-white mb-4">My Team</h3>
+            <div className="w-20 h-20 rounded-full mx-auto mb-4 border-2 border-purple-400/40 flex items-center justify-center bg-gradient-to-br from-purple-600/30 to-cyan-600/30 shadow-inner">
+              <span className="text-3xl font-extrabold text-white">
+                {teamInitial}
+              </span>
+            </div>
+            <h4 className="text-base font-bold text-center text-white mb-1">
+              {displayTeamName}
+            </h4>
+            <p className="text-xs text-zinc-300 text-center leading-relaxed">
+              {displayTeamBio}
+            </p>
           </div>
-
-          <p className="text-body-sm font-body text-zinc-400 text-center">
-            {teamBio}
-          </p>
           <button
+            type="button"
             onClick={() => router.push("/team-setup")}
-            className="w-full mt-4 btn-primary"
+            className="w-full mt-5 btn-primary text-xs py-2.5"
           >
             Edit Team Info
           </button>
         </div>
 
-        {/* Hackathon Timer Card */}
-        <div className="vibrant-card glow-purple">
-          <div>
-            <div className="text-center">
-              <h3 className="text-heading-lg font-heading mb-1 text-white">
-                Project Deadline
-              </h3>
-              <p className="text-caption text-gray-300 mb-4">
-                Time remaining until IEEE IGDTUW deadline
-              </p>
-
-              {hackathonTimeRemaining ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="timer-digit-enhanced glow-purple p-2 sm:p-3">
-                      <div className="text-display-sm font-display text-white tabular-nums">
-                        {hackathonTimeRemaining.days.toString().padStart(2, "0")}
-                      </div>
-                      <div className="text-[11px] text-gray-200">DAYS</div>
-                    </div>
-                    <div className="timer-digit-enhanced glow-pink p-2 sm:p-3">
-                      <div className="text-display-sm font-display text-white tabular-nums">
-                        {hackathonTimeRemaining.hours.toString().padStart(2, "0")}
-                      </div>
-                      <div className="text-[11px] text-gray-200">HOURS</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="timer-digit-enhanced glow-orange p-2 sm:p-3">
-                      <div className="text-display-sm font-display text-white tabular-nums">
-                        {hackathonTimeRemaining.minutes
-                          .toString()
-                          .padStart(2, "0")}
-                      </div>
-                      <div className="text-[11px] text-gray-200">MINS</div>
-                    </div>
-                    <div className="timer-digit-enhanced glow-purple p-2 sm:p-3">
-                      <div className="text-display-sm font-display text-white tabular-nums">
-                        {hackathonTimeRemaining.seconds
-                          .toString()
-                          .padStart(2, "0")}
-                      </div>
-                      <div className="text-[11px] text-gray-200">SECS</div>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs text-gray-200 mb-1.5">
-                      <span>Start</span>
-                      <span>Finish</span>
-                    </div>
-                    <div className="w-full bg-zinc-700/80 rounded-full h-2 overflow-hidden">
-                      <div
-                        className="progress-enhanced h-2 rounded-full transition-all duration-1000"
-                        style={{
-                          width: `${getHackathonProgress()}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <div className="text-center mt-2">
-                      <span className="text-xs text-gray-200 font-medium">
-                        {Math.round(getHackathonProgress())}% Elapsed
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Quick submission button inside timer */}
-                  <button
-                    onClick={() => {
-                      setSubmissionSuccess(false);
-                      setShowSubmissionModal(true);
-                    }}
-                    className="w-full mt-2 btn-primary text-xs py-2"
-                  >
-                    {submission ? "✓ Submission Verified" : "Submit Project 🚀"}
-                  </button>
-                </div>
-              ) : (
-                <div className="text-center py-6 timer-complete">
-                  <div className="text-3xl font-display text-gradient-accent mb-2">
-                    🎉
-                  </div>
-                  <p className="text-heading-md font-heading text-white">
-                    Deadline Reached!
-                  </p>
-                  <p className="text-body-sm text-gray-200 mt-1 mb-4">
-                    Ready to submit your finalized project.
-                  </p>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => {
-                        setSubmissionSuccess(false);
-                        setShowSubmissionModal(true);
-                      }}
-                      className="btn-primary w-full"
-                    >
-                      {submission ? "Review Submission 🚀" : "Submit Project 🚀"}
-                    </button>
-                    <button
-                      onClick={() => router.push("/team-setup")}
-                      className="btn-secondary w-full text-xs"
-                    >
-                      Adjust Deadline
-                    </button>
-                  </div>
-                </div>
-              )}
+        {/* Hackathon Deadline Card */}
+        <div className="vibrant-card flex flex-col justify-between">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-200 uppercase tracking-wider mb-1">
+              <Clock className="w-3.5 h-3.5" />
+              Project Deadline
             </div>
+            <p className="text-[11px] text-purple-100/80 mb-4">
+              Hackathon Submission Tracker
+            </p>
+
+            {hackathonTimeRemaining ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-black/25 border border-white/15">
+                    <div className="text-xl font-bold text-white tabular-nums">
+                      {String(hackathonTimeRemaining.days).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] text-purple-100">DAYS</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/25 border border-white/15">
+                    <div className="text-xl font-bold text-white tabular-nums">
+                      {String(hackathonTimeRemaining.hours).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] text-purple-100">HOURS</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/25 border border-white/15">
+                    <div className="text-xl font-bold text-white tabular-nums">
+                      {String(hackathonTimeRemaining.minutes).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] text-purple-100">MINS</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/25 border border-white/15">
+                    <div className="text-xl font-bold text-white tabular-nums">
+                      {String(hackathonTimeRemaining.seconds).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] text-purple-100">SECS</div>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <div className="w-full bg-black/30 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-white h-2 rounded-full transition-all duration-1000"
+                      style={{ width: `${getHackathonProgress()}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-purple-100 mt-1 block">
+                    {Math.round(getHackathonProgress())}% Elapsed
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="py-4 px-2 rounded-2xl bg-black/20 border border-white/15">
+                <p className="text-sm font-bold text-white">
+                  {submission ? "Submission Recorded" : "Demo & Submission Window"}
+                </p>
+                <p className="text-xs text-purple-100/85 mt-1">
+                  {submission
+                    ? "Your project is ready for evaluation."
+                    : "Verify repo, README, and live link before submitting."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setSubmissionSuccess(false);
+                setShowSubmissionModal(true);
+              }}
+              className="btn-primary w-full text-xs py-2.5"
+            >
+              {submission ? "Review Submission" : "Submit Project"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/team-setup")}
+              className="btn-secondary w-full text-xs py-2"
+            >
+              Adjust Deadline
+            </button>
           </div>
         </div>
       </div>
@@ -710,32 +546,33 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-lg text-white">Upcoming Tasks</h3>
           <button
+            type="button"
             onClick={() => router.push("/tasks")}
             className="text-xs text-cyan-400 hover:text-cyan-300 underline"
           >
             Open Task Board →
           </button>
         </div>
-        {tasks.filter((task) => task.status !== "Done").length > 0 ? (
+        {safeTasks.filter((task) => task.status !== "Done").length > 0 ? (
           <div className="space-y-3">
-            {tasks
+            {safeTasks
               .filter((task) => task.status !== "Done")
               .map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 glass rounded-xl flex justify-between items-center transition-all duration-300"
+                  className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center gap-3"
                 >
                   <div>
-                    <p className="font-medium text-white">{task.title}</p>
+                    <p className="font-medium text-white text-sm">{task.title}</p>
                     <p className="text-xs text-zinc-400">
-                      Assigned to: {task.assignee}
+                      Assigned to: {task.assignee || "Team"}
                     </p>
                   </div>
                   <span
-                    className={`status-badge ${
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
                       task.status === "In Progress"
-                        ? "status-progress"
-                        : "status-todo"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
                     }`}
                   >
                     {task.status}
@@ -744,45 +581,47 @@ export default function Dashboard() {
               ))}
           </div>
         ) : (
-          <p className="text-zinc-400 text-center py-4">
-            All tasks completed! 🎉
+          <p className="text-zinc-400 text-center py-4 text-sm">
+            All tasks completed!
           </p>
         )}
       </div>
 
       {/* Team Members Section */}
       <div className="card mt-6">
-        <h3 className="font-semibold mb-4 text-lg text-white">Team Members</h3>
-        {teamMembers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {teamMembers.map((member) => (
-              <div
-                key={member.id}
-                className="glass rounded-xl flex items-center p-4"
-              >
-                <img
-                  src={member.avatar}
-                  alt={member.name}
-                  className="w-10 h-10 rounded-full mr-3"
-                />
-                <div className="truncate">
-                  <p className="font-medium text-white truncate">{member.name}</p>
-                  <p className="text-xs text-zinc-400 truncate">{member.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-zinc-400 mb-3">No team members yet</p>
-            <button
-              onClick={() => router.push("/team-setup")}
-              className="btn-primary"
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg text-white flex items-center gap-2">
+            <Users className="w-4 h-4 text-cyan-400" />
+            Team Members ({displayMembers.length})
+          </h3>
+          <button
+            type="button"
+            onClick={() => router.push("/team-setup")}
+            className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+          >
+            Manage Team →
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {displayMembers.map((member) => (
+            <div
+              key={member.id}
+              className="rounded-xl bg-slate-900/60 border border-slate-800 flex items-center p-3.5"
             >
-              Add Team Members
-            </button>
-          </div>
-        )}
+              <img
+                src={member.avatar}
+                alt={member.name}
+                className="w-10 h-10 rounded-full mr-3 border border-slate-700"
+              />
+              <div className="truncate">
+                <p className="font-medium text-white text-sm truncate">
+                  {member.name}
+                </p>
+                <p className="text-xs text-zinc-400 truncate">{member.role}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Project Submission Verification Modal */}
@@ -792,8 +631,8 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-2">
                 <Rocket className="w-5 h-5 text-cyan-400" />
-                <h2 className="text-heading-xl font-heading text-white">
-                  Project Submission & Verification
+                <h2 className="text-lg font-bold text-white">
+                  Project Submission &amp; Verification
                 </h2>
               </div>
               <button
@@ -807,17 +646,17 @@ export default function Dashboard() {
 
             {submissionSuccess ? (
               <div className="text-center py-6 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto border border-emerald-500/50">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mx-auto border border-emerald-500/50">
                   ✓
                 </div>
                 <h3 className="text-xl font-semibold text-white">
-                  Submission Verified & Recorded!
+                  Submission Verified &amp; Recorded!
                 </h3>
                 <p className="text-sm text-zinc-300 max-w-md mx-auto">
                   Your project has been verified against hackathon requirements
                   and recorded for evaluation.
                 </p>
-                <div className="glass p-4 rounded-xl text-left text-xs space-y-2 border border-zinc-700">
+                <div className="p-4 rounded-xl bg-slate-900/80 text-left text-xs space-y-2 border border-zinc-700">
                   <p>
                     <span className="text-zinc-400">Project:</span>{" "}
                     <strong className="text-white">{subTitle}</strong>
@@ -850,7 +689,7 @@ export default function Dashboard() {
                   onClick={() => setShowSubmissionModal(false)}
                   className="w-full btn-primary"
                 >
-                  Close & View Dashboard
+                  Close &amp; View Dashboard
                 </button>
               </div>
             ) : (
@@ -932,7 +771,6 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* Pre-submission Verification Checklist */}
                 <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-700/80 space-y-2.5">
                   <p className="text-xs font-semibold text-zinc-300">
                     Submission Quality Checklist:
@@ -942,11 +780,10 @@ export default function Dashboard() {
                       type="checkbox"
                       checked={checklistRepo}
                       onChange={(e) => setChecklistRepo(e.target.checked)}
-                      className="mt-0.5 rounded border-zinc-600 text-cyan-500 focus:ring-cyan-400"
+                      className="mt-0.5 rounded border-zinc-600 text-cyan-500"
                     />
                     <span>
-                      Public GitHub repository is committed with clean git
-                      history
+                      Public GitHub repository is committed with clean git history
                     </span>
                   </label>
                   <label className="flex items-start gap-2.5 text-xs text-zinc-300 cursor-pointer">
@@ -954,11 +791,10 @@ export default function Dashboard() {
                       type="checkbox"
                       checked={checklistReadme}
                       onChange={(e) => setChecklistReadme(e.target.checked)}
-                      className="mt-0.5 rounded border-zinc-600 text-cyan-500 focus:ring-cyan-400"
+                      className="mt-0.5 rounded border-zinc-600 text-cyan-500"
                     />
                     <span>
-                      Comprehensive README documentation with setup guide is
-                      present
+                      Comprehensive README documentation with setup guide is present
                     </span>
                   </label>
                   <label className="flex items-start gap-2.5 text-xs text-zinc-300 cursor-pointer">
@@ -966,7 +802,7 @@ export default function Dashboard() {
                       type="checkbox"
                       checked={checklistDemo}
                       onChange={(e) => setChecklistDemo(e.target.checked)}
-                      className="mt-0.5 rounded border-zinc-600 text-cyan-500 focus:ring-cyan-400"
+                      className="mt-0.5 rounded border-zinc-600 text-cyan-500"
                     />
                     <span>
                       Live production demo is verified, responsive, and working
@@ -990,13 +826,13 @@ export default function Dashboard() {
                   >
                     {submittingProject ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         <span>Verifying...</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Confirm & Submit</span>
+                        <span>Confirm &amp; Submit</span>
                       </>
                     )}
                   </button>
