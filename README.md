@@ -207,6 +207,45 @@ here. To document the UI with real images, please provide screenshots of:
 - Team chat and its summary view.
 - The files page and AI pitch generator.
 
+## API Endpoints Reference
+
+### Authentication (`/api/auth`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/signup` | Register a new user | No |
+| `POST` | `/api/auth/login` | Authenticate and obtain JWT | No |
+| `GET` | `/api/auth/me` | Fetch current user profile | Yes |
+| `GET` | `/api/auth/verify` | Check if JWT token is valid | Yes |
+
+### Teams (`/api/teams`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/teams` | Create a new team (as Leader) | Yes |
+| `POST` | `/api/teams/join` | Join existing team via invite code | Yes |
+| `GET` | `/api/teams/myteam` | Get current team profile & members | Yes |
+| `POST` | `/api/teams/leave` | Leave current team | Yes |
+
+### Tasks (`/api/tasks`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/tasks` | Get all tasks for current user's team | Yes |
+| `POST` | `/api/tasks` | Create a new task in team | Yes |
+| `PUT` | `/api/tasks/:id` | Update task status or details | Yes |
+| `DELETE` | `/api/tasks/:id` | Remove a task | Yes |
+
+### Files (`/api/files`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/files/upload` | Upload file to team GridFS storage | Yes |
+| `GET` | `/api/files/files` | List all files belonging to user's team | Yes |
+| `GET` | `/api/files/file/:filename` | Stream/download team file | Yes |
+| `DELETE` | `/api/files/file/:identifier` | Delete file from GridFS | Yes |
+
+### AI Integration (`/api/gemini`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/gemini` | Generate pitch / recommendations | No |
+
 ## Troubleshooting
 
 - **`Failed to fetch`:** Confirm the Express backend is running, its
