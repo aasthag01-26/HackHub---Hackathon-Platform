@@ -7,13 +7,14 @@ generation into one place.
 ## Features
 
 - **Authentication:** Sign up and log in through the Express API, with user
-  records stored in MongoDB.
+  records stored in MongoDB, plus automatic team joining via invite links or codes.
 - **Dashboard:** View task progress, a Chart.js status chart, upcoming tasks,
   team details, and deadline/countdown information.
 - **Task board:** Add tasks, assign them to team members, move them between
   **To Do**, **In Progress**, and **Done**, and delete them.
 - **Team setup and management:** Set up a team profile, deadline, and member
-  roles; view and edit team information.
+  roles; send Gmail team invites (`POST /api/teams/invite`), track pending
+  invites, and manage active members.
 - **Team chat:** Send messages and request an AI summary of the conversation.
 - **Files and links:** Upload, list, download, and delete team files, and save
   useful links.
@@ -27,7 +28,7 @@ API also provides protected user, team, task, and file endpoints.
 
 - **Frontend:** Next.js 14 (the lockfile resolves 14.2.33), React 18,
   TypeScript, Tailwind CSS 3.4, and Chart.js.
-- **API backend:** Node.js, Express 4, Mongoose 8, and MongoDB.
+- **API backend:** Node.js, Express 4, Mongoose 8, Nodemailer, and MongoDB.
 - **AI pitch generation:** Google Gemini API, through the Express backend.
 - **AI chat summarizer:** Optional Python, Flask, PyTorch, and Transformers
   service.
@@ -43,14 +44,16 @@ API also provides protected user, team, task, and file endpoints.
   service. The Python version and the package versions in
   `ai-summarizer/requirements.txt` are not pinned by this project.
 - **API credentials:** A MongoDB connection string and JWT signing secret are
-  needed by the backend. A Gemini API key is needed for pitch generation.
+  needed by the backend. A Gemini API key is needed for pitch generation, and
+  Gmail SMTP credentials (16-character Google App Password) are optional for
+  sending live team invite emails.
 
 ## Installation
 
 1. Clone the repository and enter the project directory:
 
    ```bash
-   git clone https://github.com/aasthag01-26/HackHub---Hackathon-Platform.git
+   git clone [https://github.com/aasthag01-26/HackHub---Hackathon-Platform.git](https://github.com/aasthag01-26/HackHub---Hackathon-Platform.git)
    cd HackHub---Hackathon-Platform
    ```
 
@@ -76,10 +79,15 @@ API also provides protected user, team, task, and file endpoints.
    MONGO_URI=<your MongoDB connection string>
    JWT_SECRET=<your private signing secret>
    GEMINI_API_KEY=<your Gemini API key>
+   FRONTEND_URL=http://localhost:3000
+   EMAIL_USER=<your Gmail address>
+   EMAIL_PASS=<your 16-character Gmail App Password>
    ```
 
    `PORT` is optional and defaults to `5000`. `GEMINI_API_KEY` is only required
-   for Gemini-backed pitch generation. Keep real credentials out of Git.
+   for Gemini-backed pitch generation. EMAIL_USER and EMAIL_PASS are optional;
+   if omitted, /api/teams/invite still records the pending invite and returns a
+   shareable join link. Keep real credentials out of Git.
 
 5. The frontend defaults to the local API at
    `http://localhost:5000/api`. To change that URL, create a root-level
