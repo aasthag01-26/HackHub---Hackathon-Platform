@@ -277,3 +277,9 @@ Thanks to everyone who contributes to making HackHub better!
 ## License
 
 This project is for educational and development purposes.
+
+### In-App Notification System
+- Real-time alerts for team invitations, task assignments, upcoming deadlines, team chat, and hackathon registration status updates.
+- Single "Notifications" entry in the sidebar (and a bell in the mobile header) with an unread badge that opens the full-page Notification Center.
+- Notifications persist per user in MongoDB via the Express API (`GET/POST/DELETE /api/notifications`, `PATCH /api/notifications/read-all`, `PATCH /api/notifications/:id/read`), using `NEXT_PUBLIC_API_URL` (default `http://localhost:5000`).
+- Dedicated Notifications Management Dashboard (`/notifications`) with category filtering and simulation testing.

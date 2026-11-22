@@ -33,28 +33,59 @@ const mentorSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
-    domains: [
+    domains: 
       {
-        type: String,
-        trim: true,
+        type: [String],
+        // trim: true,
+        default: ["Open Innovation"],
       },
-    ],
-    expertise: [
+    expertise: 
       {
-        type: String,
-        trim: true,
+        type: [String],
+        // trim: true,
+        default: [],
       },
-    ],
+    skills: {
+      type: [String],
+      default: [],
+    },
     availableSlots: {
       type: Number,
       default: 5,
       min: 0,
+    },
+    experienceYears: {
+      type: Number,
+      min: 1,
+      default: 3,
+    },
+    availabilityStatus: {
+      type: String,
+      enum: ["available", "busy", "unavailable"],
+      default: "available",
+    },
+    contactEmail: {
+      type: String,
+      // required: [true, "Contact email is required"],
+      trim: true,
+      default: "",
+    },
+    githubUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    linkedinUrl: {
+      type: String,
+      trim: true,
+      default: "",
     },
     socialLinks: {
       linkedin: { type: String, trim: true, default: "" },
       github: { type: String, trim: true, default: "" },
       website: { type: String, trim: true, default: "" },
     },
+    
   },
   {
     timestamps: true,
@@ -64,4 +95,6 @@ const mentorSchema = new mongoose.Schema(
 mentorSchema.index({ domains: 1 });
 mentorSchema.index({ expertise: 1 });
 
-module.exports = mongoose.model("Mentor", mentorSchema);
+const Mentor = mongoose.models.Mentor || mongoose.model("Mentor", mentorSchema);
+
+module.exports = Mentor;

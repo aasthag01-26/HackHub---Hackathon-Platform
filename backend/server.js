@@ -10,7 +10,17 @@ const teamRoute = require("./routes/teamRoute.js");
 const taskRoute = require("./routes/taskRoute.js");
 const askGeminiRoute = require("./routes/askGeminiRoute.js");
 const fileRoutes = require("./routes/fileRoute.js");
+
+const resourceRoute = require("./routes/resourceRoute.js");
+const profileRoute = require("./routes/profileRoute.js");
+const projectRoute = require("./routes/projectRoute.js");
+const leaderboardRoute = require("./routes/leaderboardRoute.js");
+const teamDiscoveryRoute = require("./routes/teamDiscoveryRoute.js");
+
 const mentorRoute = require("./routes/mentorRoute.js");
+const hackathonRoute = require("./routes/hackathonRoute.js");
+const notificationRoute = require("./routes/notificationRoute.js");
+const chatRoute = require("./routes/chatRoute.js");
 
 const app = express();
 
@@ -44,8 +54,17 @@ app.use("/api/teams", teamRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/gemini", askGeminiRoute);
 app.use("/api/files", fileRoutes);
-app.use("/api/mentors", mentorRoute);
 
-// ✅ Start server
+app.use("/api/resources", resourceRoute);
+app.use("/api/profile", profileRoute);
+app.use("/api/projects", projectRoute);
+app.use("/api/leaderboard", leaderboardRoute);
+app.use("/api/discovery", teamDiscoveryRoute);
+
+app.use("/api/mentors", mentorRoute);
+app.use("/api/hackathons", hackathonRoute);
+app.use("/api/notifications", notificationRoute);
+app.use("/api/chat", chatRoute);
 const PORT = process.env.PORT || 5000;
+// ✅ Start server
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

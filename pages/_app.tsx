@@ -5,6 +5,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
+import ToastContainer from "../components/Toast";
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
       ) : (
         <Component {...pageProps} />
       )}
+      <ToastContainer />
     </AppProvider>
   );
 }

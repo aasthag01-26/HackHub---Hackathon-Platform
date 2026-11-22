@@ -5,9 +5,33 @@ const feedbackItemSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
   mentorName: {
     type: String,
     default: "Mentor",
+  },
+  givenBy: {
+    type: String,
+    default: "Assigned Mentor",
+  },
+  milestone: {
+    type: String,
+    required: true,
+    enum: [
+      "Initial Project Ideation",
+      "System Architecture Review",
+      "MVP Demo & Code Quality",
+      "Final Pitch & Deployment Review",
+    ],
+    default: "MVP Demo & Code Quality",
+  },
+  feedback: {
+    type: String,
+    trim: true,
+    default: "",
   },
   rating: {
     type: Number,
@@ -17,18 +41,18 @@ const feedbackItemSchema = new mongoose.Schema({
   },
   strengths: {
     type: String,
-    required: true,
     trim: true,
+    default: "",
   },
   areasForImprovement: {
     type: String,
-    required: true,
     trim: true,
+    default: "",
   },
   recommendations: {
     type: String,
-    required: true,
     trim: true,
+    default: "",
   },
 });
 
@@ -38,6 +62,11 @@ const mentorshipRequestSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Mentor",
       required: false,
+    },
+    mentorId: {
+      type: String,
+      trim: true,
+      default: "",
     },
     mentorName: {
       type: String,
@@ -51,7 +80,7 @@ const mentorshipRequestSchema = new mongoose.Schema(
     },
     teamName: {
       type: String,
-      required: true,
+      required: [true, "Team name is required"],
       trim: true,
     },
     requesterName: {
@@ -62,29 +91,49 @@ const mentorshipRequestSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    projectName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     projectTitle: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     projectDescription: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
-    domain: {
+    requestMessage: {
       type: String,
-      default: "Web Dev",
+      trim: true,
+      default: "",
     },
     guidanceNeeded: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
+    },
+    domain: {
+      type: String,
+      trim: true,
+      default: "Web Dev",
     },
     status: {
       type: String,
       enum: ["pending", "accepted", "rejected", "completed"],
       default: "pending",
+    },
+    
+    projectRepoUrl: {
+      type: String,
+      default: "",
+    },
+    projectDemoUrl: {
+      type: String,
+      default: "",
     },
     feedbackHistory: [feedbackItemSchema],
   },
@@ -96,4 +145,8 @@ const mentorshipRequestSchema = new mongoose.Schema(
 mentorshipRequestSchema.index({ mentor: 1, status: 1 });
 mentorshipRequestSchema.index({ teamName: 1 });
 
-module.exports = mongoose.model("MentorshipRequest", mentorshipRequestSchema);
+const MentorshipRequest =
+  mongoose.models.MentorshipRequest ||
+  mongoose.model("MentorshipRequest", mentorshipRequestSchema);
+
+module.exports = MentorshipRequest;
