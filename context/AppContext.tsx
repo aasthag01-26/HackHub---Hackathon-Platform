@@ -303,6 +303,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           const mappedTasks = data.map((t) => normalizeBackendTask(t));
           setTasks(mappedTasks);
           localStorage.setItem("hackhub_tasks", JSON.stringify(mappedTasks));
+          return;
+        }
+      }
+      const cached = localStorage.getItem("hackhub_tasks");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setTasks(parsed);
         }
       }
     } catch (err) {
@@ -311,7 +319,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed) ) {
             setTasks(parsed);
           }
         } catch {
@@ -597,6 +605,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
     if (typeof window !== "undefined") {
       localStorage.removeItem(NOTIFICATIONS_CACHE_KEY);
+      localStorage.removeItem("hackhub_tasks");
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("currentUser");
       localStorage.removeItem("token");

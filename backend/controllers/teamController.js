@@ -52,9 +52,12 @@ console.log("Updated user teamId:", updatedUser?.teamId);
 // @route   POST /api/teams/join
 const joinTeam = async (req, res) => {
   try {
-    const { inviteCode } = req.body;
+    const cleanCode = (req.body.inviteCode || "").trim();
+    if (!cleanCode) {
+      return res.status(400).json({ message: "Please enter an invite code" });
+    }
 
-    const team = await Team.findOne({ inviteCode });
+    const team = await Team.findOne({ inviteCode: cleanCode });
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
     }

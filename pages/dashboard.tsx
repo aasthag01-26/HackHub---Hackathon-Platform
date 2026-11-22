@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Users,
   Clock,
+  Crown,
 } from "lucide-react";
 
 interface ProjectSubmission {
@@ -603,24 +604,41 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {displayMembers.map((member) => (
+          {displayMembers.map((member) => {
+            const roleLabel = member.role?.trim() || "Member";
+            const isLeader = roleLabel.toLowerCase() === "leader";
+
+            return (
             <div
               key={member.id}
-              className="rounded-xl bg-slate-900/60 border border-slate-800 flex items-center p-3.5"
+              className="rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-3 p-3.5"
             >
+              <div className="flex items-center min-w-0">
               <img
                 src={member.avatar}
                 alt={member.name}
-                className="w-10 h-10 rounded-full mr-3 border border-slate-700"
+                className="w-10 h-10 rounded-full mr-3 border border-slate-700 shrink-0"
               />
-              <div className="truncate">
+              <div className="min-w-0">
                 <p className="font-medium text-white text-sm truncate">
                   {member.name}
                 </p>
-                <p className="text-xs text-zinc-400 truncate">{member.role}</p>
+                <p className="text-xs text-zinc-400 truncate">{isLeader ? "Team Leader" : roleLabel}</p>
               </div>
             </div>
-          ))}
+            <span
+                  className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-semibold shrink-0 ${
+                    isLeader
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      : "bg-slate-800 text-cyan-300 border border-slate-700"
+                  }`}
+                >
+                  {isLeader && <Crown className="w-3 h-3 text-amber-300" />}
+                  {roleLabel}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

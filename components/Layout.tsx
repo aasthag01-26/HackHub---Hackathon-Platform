@@ -221,7 +221,7 @@ const Layout = ({ children }: LayoutProps) => {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-64 flex-shrink-0 flex-col border-r border-gray-700 bg-[#0f172a]/70 p-4 backdrop-blur-md md:flex md:sticky md:top-0">
+      <aside className="hidden min-h-screen w-64 flex-shrink-0 flex-col border-r border-gray-700 bg-[#0f172a]/70 p-4 backdrop-blur-md md:flex md:sticky md:top-0">
         <div className="mb-6 text-center">
           <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl mx-auto mb-2 flex items-center justify-center shadow-lg">
             <Rocket className="text-white w-5 h-5" />
@@ -230,7 +230,6 @@ const Layout = ({ children }: LayoutProps) => {
           <p className="text-sm text-zinc-300 mt-1">Innovate. Collaborate. Launch.</p>
         </div>
 
-        {/* Notifications: single entry point, goes straight to the full-page Notification Center */}
         <Link
           href="/notifications"
           aria-current={isNotificationsActive ? "page" : undefined}
@@ -253,8 +252,8 @@ const Layout = ({ children }: LayoutProps) => {
           )}
         </Link>
 
-        <nav className="flex-1">
-          <ul className="space-y-2">
+        <nav className="flex-1 overflow-y-auto pr-1">
+          <ul className="space-y-1.5">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = router.pathname === item.href;
@@ -263,14 +262,14 @@ const Layout = ({ children }: LayoutProps) => {
                   <Link
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
-                    className={`flex items-center px-3 py-2 rounded-lg transition-all ${
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-all ${
                       isActive
                         ? "bg-gradient-to-r from-cyan-600 to-purple-600 text-white"
                         : "text-gray-300 hover:bg-gray-800/50"
                     }`}
                   >
-                    <Icon className="mr-3 w-5 h-5" />
-                    {item.name}
+                    <Icon className="mr-3 w-4 h-4 shrink-0" />
+                    <span className="truncate">{item.name}</span>
                   </Link>
                 </li>
               );
@@ -278,13 +277,14 @@ const Layout = ({ children }: LayoutProps) => {
           </ul>
         </nav>
 
-        <div className="mt-auto pt-4 border-t border-gray-700">
+        <div className="mt-4 pt-3 border-t border-gray-700">
           <button
+            type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-start px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800/50 transition-all"
+            className="w-full flex items-center justify-start px-3 py-2 rounded-lg text-sm text-gray-200 hover:bg-gray-800/70 transition-all"
           >
-            <LogOut className="mr-3 w-5 h-5" />
-            Logout
+            <LogOut className="mr-3 w-4 h-4 shrink-0" />
+            <span>Logout</span>
           </button>
         </div>
       </aside>

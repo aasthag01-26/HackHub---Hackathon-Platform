@@ -2,7 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import Layout from "../components/Layout";
 import { useAppContext } from "../context/AppContext";
 import { useRouter } from "next/router";
-import { Users, Copy, CheckCircle2, AlertCircle, LogOut, Edit2, RefreshCw } from "lucide-react";
+import {
+  Users,
+  Copy,
+  CheckCircle2,
+  AlertCircle,
+  LogOut,
+  Edit2,
+  RefreshCw,
+  Crown,
+} from "lucide-react";
 
 interface DisplayMember {
   id: string;
@@ -13,11 +22,13 @@ interface DisplayMember {
 }
 
 interface BackendTeamMember {
-  user: {
-    _id?: string;
-    name?: string;
-    email?: string;
-  } | string;
+  user:
+    | {
+        _id?: string;
+        name?: string;
+        email?: string;
+      }
+    | string;
   role: string;
   _id?: string;
 }
@@ -25,6 +36,7 @@ interface BackendTeamMember {
 interface BackendTeam {
   _id: string;
   name: string;
+  bio?: string;
   inviteCode: string;
   members: BackendTeamMember[];
 }
@@ -39,7 +51,9 @@ export default function Team() {
   } = useAppContext();
 
   const [teamName, setTeamName] = useState(contextTeamName || "My Team");
-  const [teamBio, setTeamBio] = useState(contextTeamBio || "Collaborative hackathon team.");
+  const [teamBio, setTeamBio] = useState(
+    contextTeamBio || "Collaborative hackathon team."
+  );
   const [inviteCode, setInviteCode] = useState("");
   const [members, setMembers] = useState<DisplayMember[]>([]);
 
@@ -56,8 +70,11 @@ export default function Team() {
     text: string;
   } | null>(null);
 
-  const API_BASE =
+  const rawApi =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const API_BASE = rawApi.endsWith("/api")
+    ? rawApi
+    : `${rawApi.replace(/\/+$/, "")}/api`;
 
   const showToast = (type: "success" | "error", text: string) => {
     setToastMessage({ type, text });
@@ -75,7 +92,6 @@ export default function Team() {
       : { "Content-Type": "application/json" };
   };
 
-  // Fetch real team details from backend
   const fetchMyTeam = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -84,10 +100,14 @@ export default function Team() {
       });
 
       if (res.ok) {
-        const data: { team: BackendTeam } = await res.json();
+        const data: { team?: BackendTeam } = await res.json();
         if (data.team) {
           setTeamName(data.team.name);
           updateContextTeamName(data.team.name);
+          if (data.team.bio) {
+            setTeamBio(data.team.bio);
+            updateContextTeamBio(data.team.bio);
+          }
           setInviteCode(data.team.inviteCode);
 
           if (Array.isArray(data.team.members)) {
@@ -95,12 +115,14 @@ export default function Team() {
               const u = typeof m.user === "object" && m.user ? m.user : null;
               const name = u?.name || `Teammate ${idx + 1}`;
               const email = u?.email;
-              const avatar = `https://placehold.co/40x40/38bdf8/ffffff?text=${name
-                .charAt(0)
-                .toUpperCase()}`;
+              const avatar = `https://placehold.co/40x40/38bdf8/ffffff?text=${encodeURIComponent(
+                name.charAt(0).toUpperCase()
+              )}`;
 
               return {
-                id: m._id || (typeof m.user === "string" ? m.user : String(idx)),
+                id:
+                  m._id ||
+                  (typeof m.user === "string" ? m.user : `member-${idx}`),
                 name,
                 role: m.role || "Member",
                 avatar,
@@ -111,15 +133,16 @@ export default function Team() {
           }
         }
       } else {
-        // Fallback default
-        setInviteCode("HACK-" + Math.random().toString(36).substring(2, 6).toUpperCase());
+        setInviteCode(
+          "HACK-" + Math.random().toString(36).substring(2, 6).toUpperCase()
+        );
       }
     } catch (err) {
       console.warn("Backend team fetch error, using local state:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [API_BASE, updateContextTeamName]);
+  }, [API_BASE, updateContextTeamName, updateContextTeamBio]);
 
   useEffect(() => {
     fetchMyTeam();
@@ -200,19 +223,23 @@ export default function Team() {
     showToast("success", `Updated role for ${currentMember.name}`);
   };
 
+  const isLeaderRole = (role: string) =>
+    role.trim().toLowerCase() === "leader";
+
   return (
     <Layout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-display-md font-display text-gradient-primary mb-1 text-glow">
-            Team Workspace & Settings
+            Team Workspace &amp; Settings
           </h2>
           <p className="text-body-sm font-body text-zinc-400 max-w-3xl">
-            Manage your team's identity, share the unique join code, and view
+            Manage your team&apos;s identity, share the unique join code, and view
             all active team members.
           </p>
         </div>
         <button
+          type="button"
           onClick={() => fetchMyTeam()}
           disabled={isLoading}
           className="btn-secondary text-sm px-3 py-2 flex items-center gap-2"
@@ -242,9 +269,10 @@ export default function Team() {
         </div>
       )}
 
-      {/* Team Profile Card */}
       <div className="card mb-6 border border-purple-500/20">
-        <h3 className="text-heading-lg font-heading text-white mb-4">Team Profile</h3>
+        <h3 className="text-heading-lg font-heading text-white mb-4">
+          Team Profile
+        </h3>
 
         <div className="space-y-4">
           <div>
@@ -300,6 +328,7 @@ export default function Team() {
 
           <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
             <button
+              type="button"
               onClick={saveTeamProfile}
               disabled={isSaving}
               className="btn-primary flex items-center gap-2"
@@ -307,6 +336,7 @@ export default function Team() {
               {isSaving ? "Saving..." : "Save Profile Changes"}
             </button>
             <button
+              type="button"
               onClick={() => setShowLeaveModal(true)}
               className="btn-secondary border-rose-500/40 text-rose-300 hover:border-rose-400 hover:text-rose-200 text-xs px-3 py-2 flex items-center gap-1.5"
             >
@@ -317,11 +347,12 @@ export default function Team() {
         </div>
       </div>
 
-      {/* Members Card */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-heading-lg font-heading text-white">Team Members</h3>
+            <h3 className="text-heading-lg font-heading text-white">
+              Team Members
+            </h3>
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-300">
               {members.length}
             </span>
@@ -330,50 +361,65 @@ export default function Team() {
 
         {isLoading ? (
           <div className="py-8 text-center">
-            <div className="loader mx-auto mb-2"></div>
+            <div className="loader mx-auto mb-2" />
             <p className="text-xs text-zinc-400">Loading team members...</p>
           </div>
         ) : members.length > 0 ? (
           <div className="space-y-3">
-            {members.map((member) => (
-              <div
-                key={member.id}
-                className="glass rounded-xl flex justify-between items-center p-3.5 transition-all duration-300 hover:scale-[1.01]"
-              >
-                <div className="flex items-center gap-3 min-w-0 pr-3">
-                  <img
-                    src={member.avatar}
-                    className="w-10 h-10 rounded-full ring-2 ring-zinc-700 shrink-0"
-                    alt={member.name}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-heading-sm font-heading text-white truncate">
-                      {member.name}
-                    </p>
-                    {member.email && (
-                      <p className="text-xs text-zinc-400 truncate">{member.email}</p>
-                    )}
+            {members.map((member) => {
+              const leader = isLeaderRole(member.role);
+              return (
+                <div
+                  key={member.id}
+                  className="glass rounded-xl flex justify-between items-center p-3.5 transition-all duration-300 hover:scale-[1.01]"
+                >
+                  <div className="flex items-center gap-3 min-w-0 pr-3">
+                    <img
+                      src={member.avatar}
+                      className="w-10 h-10 rounded-full ring-2 ring-zinc-700 shrink-0"
+                      alt={member.name}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-heading-sm font-heading text-white truncate">
+                        {member.name}
+                      </p>
+                      {member.email && (
+                        <p className="text-xs text-zinc-400 truncate">
+                          {member.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${
+                        leader
+                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                          : "bg-zinc-800/80 text-cyan-300"
+                      }`}
+                    >
+                      {leader && <Crown className="w-3 h-3 text-amber-300" />}
+                      {member.role}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openEditMemberModal(member)}
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                      title="Edit role"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-zinc-800/80 text-cyan-300 font-medium">
-                    {member.role}
-                  </span>
-                  <button
-                    onClick={() => openEditMemberModal(member)}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                    title="Edit role"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="py-8 text-center rounded-xl border border-dashed border-zinc-800">
             <Users className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-            <p className="text-sm font-medium text-zinc-300">No members found</p>
+            <p className="text-sm font-medium text-zinc-300">
+              No members found
+            </p>
             <p className="text-xs text-zinc-500 mt-1 mb-3">
               Share your team invite code to collaborate with teammates.
             </p>
@@ -381,7 +427,6 @@ export default function Team() {
         )}
       </div>
 
-      {/* Edit Role Modal */}
       {showEditMemberModal && currentMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
           <div className="card w-full max-w-sm border border-purple-500/30">
@@ -411,12 +456,24 @@ export default function Team() {
                   }
                   className="input-enhanced w-full bg-zinc-900 text-white"
                 >
-                  <option value="Leader" className="bg-zinc-900 text-white">Leader</option>
-                  <option value="Frontend" className="bg-zinc-900 text-white">Frontend</option>
-                  <option value="Backend" className="bg-zinc-900 text-white">Backend</option>
-                  <option value="AI/ML" className="bg-zinc-900 text-white">AI/ML</option>
-                  <option value="Designer" className="bg-zinc-900 text-white">Designer</option>
-                  <option value="Full Stack" className="bg-zinc-900 text-white">Full Stack</option>
+                  <option value="leader" className="bg-zinc-900 text-white">
+                    Leader
+                  </option>
+                  <option value="Frontend" className="bg-zinc-900 text-white">
+                    Frontend
+                  </option>
+                  <option value="Backend" className="bg-zinc-900 text-white">
+                    Backend
+                  </option>
+                  <option value="AI/ML" className="bg-zinc-900 text-white">
+                    AI/ML
+                  </option>
+                  <option value="Designer" className="bg-zinc-900 text-white">
+                    Designer
+                  </option>
+                  <option value="Full Stack" className="bg-zinc-900 text-white">
+                    Full Stack
+                  </option>
                 </select>
               </div>
 
@@ -441,7 +498,6 @@ export default function Team() {
         </div>
       )}
 
-      {/* Leave Team Confirmation Modal */}
       {showLeaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
           <div className="card w-full max-w-sm border border-rose-500/40">
@@ -450,8 +506,9 @@ export default function Team() {
               Leave Team?
             </h2>
             <p className="text-body-sm text-zinc-300 mb-5">
-              Are you sure you want to leave <strong>{teamName}</strong>? You will
-              lose access to team tasks, files, and chat until you re-join.
+              Are you sure you want to leave <strong>{teamName}</strong>? You
+              will lose access to team tasks, files, and chat until you
+              re-join.
             </p>
             <div className="flex gap-3">
               <button
